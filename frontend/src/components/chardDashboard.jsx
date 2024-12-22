@@ -8,7 +8,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell
+  Cell,
+  ReferenceLine
 } from "recharts";
 
 const ChartDashboard = ({ products }) => {
@@ -46,6 +47,7 @@ const ChartDashboard = ({ products }) => {
             <YAxis />
             <Tooltip />
             <Legend />
+            <ReferenceLine y={20} stroke="red" strokeDasharray="3 3" label="Estoque Baixo" />
             <Bar 
               dataKey="quantidade" 
               name="Quantidade em Estoque"
