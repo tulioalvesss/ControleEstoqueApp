@@ -1,7 +1,7 @@
 import io from 'socket.io-client';
 import * as authService from './authService';
 
-const socket = io('http://localhost:3001', {
+const socket = io('http://localhost:3000', {
   autoConnect: false,
   reconnection: true
 });

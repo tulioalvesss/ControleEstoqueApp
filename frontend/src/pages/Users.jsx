@@ -100,9 +100,9 @@ const Users = () => {
 
   const getRoleLabel = (role) => {
     const roles = {
-      'ADMIN': 'Administrador',
-      'MANAGER': 'Gerente',
-      'USER': 'Usuário',
+      'admin': 'Administrador',
+      'manager': 'Gerente',
+      'employee': 'Usuário',
     };
     return roles[role] || role;
   };

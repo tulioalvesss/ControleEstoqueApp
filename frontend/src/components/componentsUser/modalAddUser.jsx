@@ -86,9 +86,9 @@ const ModalAddUser = ({ open, handleClose, onSuccess }) => {
             label="Tipo de Usuário"
             onChange={handleChange}
           >
-            <MenuItem value="ADMIN">Administrador</MenuItem>
-            <MenuItem value="MANAGER">Gerente</MenuItem>
-            <MenuItem value="USER">Usuário</MenuItem>
+            <MenuItem value="admin">Administrador</MenuItem>
+            <MenuItem value="manager">Gerente</MenuItem>
+            <MenuItem value="employee">Usuário</MenuItem>
           </Select>
         </FormControl>
       </DialogContent>

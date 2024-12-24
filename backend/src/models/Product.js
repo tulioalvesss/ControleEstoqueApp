@@ -61,6 +61,11 @@ const Product = sequelize.define('Product', {
       model: 'Enterprises',
       key: 'id'
     }
+  },
+  sendEmailAlert: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
   }
 }, {
   timestamps: true

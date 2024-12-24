@@ -6,44 +6,60 @@ import {
   DialogActions,
   TextField,
   Button,
-  Alert
+  Alert,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import { productService } from '../../services/productService';
 
 const ModalEditProduct = ({ open, handleClose, product, onSuccess }) => {
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     name: '',
     description: '',
     price: '',
-    quantity: ''
-  });
+    quantity: '',
+    minQuantity: '',
+    sendEmailAlert: false
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (product) {
       setFormData({
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        quantity: product.quantity
+        name: product.name || '',
+        description: product.description || '',
+        price: product.price || '',
+        quantity: product.quantity || '',
+        minQuantity: product.minQuantity || '',
+        sendEmailAlert: Boolean(product.sendEmailAlert)
       });
+    } else {
+      setFormData(initialFormState);
     }
   }, [product]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+  const handleCloseModal = () => {
+    setFormData(initialFormState);
+    setError('');
+    handleClose();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await productService.update(product.id, formData);
+      const updatedData = {
+        ...formData,
+        price: Number(formData.price) || 0,
+        quantity: Number(formData.quantity) || 0,
+        minQuantity: Number(formData.minQuantity) || 0,
+        sendEmailAlert: Boolean(formData.sendEmailAlert)
+      };
+
+      await productService.update(product.id, updatedData);
       onSuccess();
-      handleClose();
+      handleCloseModal();
     } catch (err) {
       setError('Erro ao atualizar produto');
       console.error(err);
@@ -51,7 +67,11 @@ const ModalEditProduct = ({ open, handleClose, product, onSuccess }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose}>
+    <Dialog 
+      open={open} 
+      onClose={handleCloseModal}
+      aria-labelledby="edit-product-dialog"
+    >
       <DialogTitle>Editar Produto</DialogTitle>
       <DialogContent>
         {error && (
@@ -67,7 +87,10 @@ const ModalEditProduct = ({ open, handleClose, product, onSuccess }) => {
           type="text"
           fullWidth
           value={formData.name}
-          onChange={handleChange}
+          onChange={(e) => setFormData({
+            ...formData,
+            name: e.target.value
+          })}
           sx={{ mb: 2 }}
         />
         <TextField
@@ -77,7 +100,10 @@ const ModalEditProduct = ({ open, handleClose, product, onSuccess }) => {
           type="text"
           fullWidth
           value={formData.description}
-          onChange={handleChange}
+          onChange={(e) => setFormData({
+            ...formData,
+            description: e.target.value
+          })}
           sx={{ mb: 2 }}
         />
         <TextField
@@ -87,7 +113,10 @@ const ModalEditProduct = ({ open, handleClose, product, onSuccess }) => {
           type="number"
           fullWidth
           value={formData.price}
-          onChange={handleChange}
+          onChange={(e) => setFormData({
+            ...formData,
+            price: e.target.value
+          })}
           sx={{ mb: 2 }}
         />
         <TextField
@@ -97,12 +126,28 @@ const ModalEditProduct = ({ open, handleClose, product, onSuccess }) => {
           type="number"
           fullWidth
           value={formData.quantity}
-          onChange={handleChange}
+          onChange={(e) => setFormData({
+            ...formData,
+            quantity: e.target.value
+          })}
+          sx={{ mb: 2 }}
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={formData.sendEmailAlert}
+              onChange={(e) => setFormData({
+                ...formData,
+                sendEmailAlert: e.target.checked
+              })}
+            />
+          }
+          label="Enviar alerta por email quando estoque estiver baixo"
           sx={{ mb: 2 }}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancelar</Button>
+        <Button onClick={handleCloseModal}>Cancelar</Button>
         <Button onClick={handleSubmit} variant="contained" color="primary">
           Salvar
         </Button>

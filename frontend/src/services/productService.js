@@ -12,8 +12,15 @@ export const productService = {
   },
 
   create: async (productData) => {
-    const response = await api.post('/api/products', productData);
-    return response.data;
+    try {
+      const response = await api.post('/api/products', {
+        ...productData,
+        sendEmailAlert: productData.sendEmailAlert || false
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
   update: async (id, productData) => {

@@ -289,7 +289,7 @@ exports.createStockHistory = async (
     productName
   };
 
-  console.log('Dados do histórico:', stockHistoryData);
+  //console.log('Dados do histórico:', stockHistoryData);
 
   const options = transaction ? { transaction } : {};
   

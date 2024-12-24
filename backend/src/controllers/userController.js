@@ -49,30 +49,48 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    // Busca o usuário com suas relações
+    const user = await User.findOne({ 
+      where: { email },
+      include: [{
+        model: Enterprise,
+        as: 'enterprise',
+        attributes: ['id', 'name']
+      }]
+    });
 
-    // Verificar se usuário existe
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
+    if (!user || !(await user.checkPassword(password))) {
       return res.status(401).json({ message: 'Email ou senha inválidos' });
     }
 
-    // Verificar senha
-    const isPasswordValid = await user.checkPassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Email ou senha inválidos' });
-    }
+    // Gera o token
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: '24h'
+    });
 
-    res.json({
+    // Prepara os dados do usuário para retorno
+    const userData = {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
       enterpriseId: user.enterpriseId,
-      hasEnterprise: !!user.enterpriseId,
-      token: generateToken(user.id)
+      enterprise: user.enterprise ? {
+        id: user.enterprise.id,
+        name: user.enterprise.name
+      } : null
+    };
+
+    // Retorna os dados necessários
+    return res.json({
+      token,
+      user: userData
     });
+
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Erro no login:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor' });
   }
 };
 

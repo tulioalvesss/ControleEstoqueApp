@@ -1,19 +1,62 @@
-import api from './api';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
 
 export const authService = {
-  login: async (credentials) => {
-    const response = await api.post('/api/users/login', credentials);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('enterpriseId', response.data.enterpriseId.toString());
-      localStorage.setItem('userId', response.data.id.toString());
+  async login(credentials) {
+    try {
+      const response = await axios.post(`${API_URL}/users/login`, credentials);
+      
+      // Validação da resposta
+      if (!response.data || !response.data.token || !response.data.user) {
+        throw new Error('Resposta inválida do servidor');
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Erro na requisição de login:', error.response || error);
+      
+      // Melhor tratamento de erro para o cliente
+      if (error.response?.status === 401) {
+        throw new Error('Email ou senha inválidos');
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else {
+        throw new Error('Erro ao fazer login. Tente novamente mais tarde.');
+      }
     }
-    return response.data;
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('enterpriseId');
+  async validateToken(token) {
+    try {
+      const response = await axios.get(`${API_URL}/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.status === 200;
+    } catch (error) {
+      console.error('Erro na validação do token:', error.response || error);
+      return false;
+    }
+  },
+
+  async logout() {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await axios.post(`${API_URL}/users/logout`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
   }
 };
 

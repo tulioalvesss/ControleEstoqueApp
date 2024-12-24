@@ -8,7 +8,7 @@ const {
   deleteProduct,
   updateStock,
 } = require('../controllers/productController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middlewares/authMiddleware');
 const { Product, StockHistory, Notification } = require('../models/associations');
 
 // Aplicar proteção em todas as rotas

@@ -3,6 +3,8 @@ const Enterprise = require('./Enterprise');
 const Product = require('./Product');
 const StockHistory = require('./StockHistory');
 const Notification = require('./Notification');
+const Supplier = require('./supplier');
+const Category = require('./Category');
 
 // Associações User <-> Enterprise
 User.belongsTo(Enterprise, { foreignKey: 'enterpriseId', as: 'enterprise' });
@@ -22,10 +24,20 @@ Notification.belongsTo(Enterprise, { foreignKey: 'enterpriseId' });
 Product.hasMany(Notification, { foreignKey: 'productId' });
 Notification.belongsTo(Product, { foreignKey: 'productId' });
 
+// Associações Supplier <-> Enterprise
+Supplier.belongsTo(Enterprise, { foreignKey: 'enterpriseId' });
+Enterprise.hasMany(Supplier, { foreignKey: 'enterpriseId' });
+
+// Associações Category <-> Enterprise
+Category.belongsTo(Enterprise, { foreignKey: 'enterpriseId' });
+Enterprise.hasMany(Category, { foreignKey: 'enterpriseId' });
+
 module.exports = {
   User,
   Enterprise,
   Product,
   StockHistory,
-  Notification
+  Notification,
+  Supplier,
+  Category
 }; 

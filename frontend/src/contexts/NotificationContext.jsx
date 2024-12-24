@@ -46,6 +46,13 @@ export const NotificationProvider = ({ children, pollingInterval = 30000 }) => {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    const enterpriseId = localStorage.getItem('enterpriseId');
+
+    if (!token || !enterpriseId) {
+      return;
+    }
+
     loadNotifications();
     
     connectSocket();

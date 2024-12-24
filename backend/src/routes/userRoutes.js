@@ -11,7 +11,7 @@ const {
   deleteUser,
   getUserById
 } = require('../controllers/userController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // Rotas públicas
 router.post('/register', register);

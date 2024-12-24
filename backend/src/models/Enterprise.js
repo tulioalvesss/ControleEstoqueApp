@@ -25,10 +25,9 @@ const Enterprise = sequelize.define('Enterprise', {
   },
   email: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     validate: {
-      isEmail: { msg: 'Email inválido' },
-      notEmpty: { msg: 'Email é obrigatório' }
+      isEmail: { msg: 'Email inválido' }
     }
   },
   phone: {
@@ -71,6 +70,16 @@ Enterprise.associate = (models) => {
   Enterprise.hasMany(models.Product, {
     foreignKey: 'enterpriseId',
     as: 'products'
+  });
+
+  Enterprise.hasMany(models.Supplier, {
+    foreignKey: 'enterpriseId',
+    as: 'suppliers'
+  });
+
+  Enterprise.hasMany(models.Category, {
+    foreignKey: 'enterpriseId',
+    as: 'categories'
   });
 };
 

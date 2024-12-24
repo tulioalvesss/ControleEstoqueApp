@@ -8,6 +8,8 @@ import {
   Button,
   Alert,
   FormControl,
+  FormControlLabel,
+  Checkbox,
   InputLabel,
   Select,
   MenuItem,
@@ -20,23 +22,36 @@ import { productService } from '../../services/productService';
 import { categoryService } from '../../services/categoryService';
 
 const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     name: '',
     description: '',
     price: '',
     quantity: '',
     categoryId: '',
-    SKU: '' // Adicionado SKU ao estado inicial
-  });
+    SKU: '',
+    minQuantity: '',
+    sendEmailAlert: false,
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
 
   const [categories, setCategories] = useState([]);
   const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newCategory, setNewCategory] = useState({ name: '', description: '', enterpriseId: '' });
   const [error, setError] = useState('');
 
   useEffect(() => {
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setFormData(initialFormState);
+      setError('');
+      setNewCategory({ name: '', description: '', enterpriseId: '' });
+      setShowNewCategory(false);
+    }
+  }, [open]);
 
   const loadCategories = async () => {
     try {
@@ -75,14 +90,19 @@ const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
 
   const handleCreateCategory = async () => {
     try {
-      const createdCategory = await categoryService.create(newCategory);
+      const enterpriseId = localStorage.getItem('enterpriseId');
+      const categoryData = {
+        ...newCategory,
+        enterpriseId
+      };
+      const createdCategory = await categoryService.create(categoryData);
       setCategories([...categories, createdCategory]);
       setFormData(prevState => ({
         ...prevState,
         categoryId: createdCategory.id
       }));
       setShowNewCategory(false);
-      setNewCategory({ name: '', description: '' });
+      setNewCategory({ name: '', description: ''});
     } catch (err) {
       setError('Erro ao criar categoria');
       console.error(err);
@@ -90,7 +110,6 @@ const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
   };
 
   const validateForm = () => {
-    const enterpriseId = localStorage.getItem('enterpriseId');
     
     if (!formData.name.trim()) {
       setError('Nome do produto é obrigatório');
@@ -140,25 +159,20 @@ const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
 
       const productData = {
         name: formData.name,
-        description: formData.description,
+        description: formData.description || '',
         sku: formData.SKU,
-        price: Number(formData.price),
-        quantity: Number(formData.quantity),
-        categoryId: formData.categoryId,
-        enterpriseId: Number(enterpriseId)
+        price: Number(formData.price) || 0,
+        quantity: Number(formData.quantity) || 0,
+        categoryId: Number(formData.categoryId),
+        enterpriseId: Number(enterpriseId),
+        minQuantity: Number(formData.minQuantity) || 0,
+        sendEmailAlert: Boolean(formData.sendEmailAlert)
       };
 
       await productService.create(productData);
       onSuccess();
+      setFormData(initialFormState);
       handleClose();
-      setFormData({
-        name: '',
-        description: '',
-        SKU: '',
-        price: '',
-        quantity: '',
-        categoryId: ''
-      });
     } catch (err) {
       console.error('Erro ao criar produto:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Erro ao criar produto';
@@ -166,10 +180,15 @@ const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
     }
   };
 
+  const handleCloseModal = () => {
+    setFormData(initialFormState);
+    handleClose();
+  };
+
   return (
     <Dialog 
       open={open} 
-      onClose={handleClose} 
+      onClose={handleCloseModal} 
       maxWidth="sm" 
       fullWidth
       PaperProps={{
@@ -251,6 +270,15 @@ const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
               variant="outlined"
               fullWidth
             />
+            <TextField
+              name="minQuantity"
+              label="Quantidade Mínima"
+              type="number"
+              value={formData.minQuantity}
+              onChange={handleChange}
+              variant="outlined"
+              fullWidth
+            />
           </Box>
 
           <FormControl fullWidth variant="outlined">
@@ -317,12 +345,25 @@ const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
               </Box>
             </Paper>
           )}
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.sendEmailAlert}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  sendEmailAlert: e.target.checked
+                })}
+              />
+            }
+            label="Enviar alerta por email quando estoque estiver baixo"
+          />
         </Box>
       </DialogContent>
 
       <DialogActions sx={{ p: 3, gap: 1 }}>
         <Button 
-          onClick={handleClose}
+          onClick={handleCloseModal}
           variant="outlined"
         >
           Cancelar

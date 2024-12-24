@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Produtos from './pages/Produtos';
@@ -12,7 +14,8 @@ import Suporte from './pages/Suporte';
 import Perfil from './pages/Perfil';
 import Notificacoes from './pages/Notificacao';
 import Configuracoes from './pages/Configuracoes';
-import { NotificationProvider } from './contexts/NotificationContext';  
+import EnterpriseRegistration from './pages/EnterpriseRegistration';
+
 const theme = createTheme({
   palette: {
     primary: {
@@ -28,78 +31,88 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <NotificationProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<HomeSaaS />} />
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/produtos"
-              element={
-                <PrivateRoute>
-                  <Produtos />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/usuarios"
-              element={
-                <PrivateRoute>
-                  <Users />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/relatorios"
-              element={
-                <PrivateRoute>
-                  <Relatorios />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/perfil"
-              element={
-                <PrivateRoute>
-                  <Perfil />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/configuracoes"
-              element={
-                <PrivateRoute>
-                  <Configuracoes />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/notificacoes"
-              element={
-                <PrivateRoute>
-                  <Notificacoes />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/suporte"
-              element={
-                <PrivateRoute>
-                  <Suporte />
-                </PrivateRoute>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
-      </NotificationProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<HomeSaaS />} />
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/produtos"
+                element={
+                  <PrivateRoute>
+                    <Produtos />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/usuarios"
+                element={
+                  <PrivateRoute>
+                    <Users />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/relatorios"
+                element={
+                  <PrivateRoute>
+                    <Relatorios />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/perfil"
+                element={
+                  <PrivateRoute>
+                    <Perfil />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/configuracoes"
+                element={
+                  <PrivateRoute>
+                    <Configuracoes />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/notificacoes"
+                element={
+                  <PrivateRoute>
+                    <Notificacoes />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/suporte"
+                element={
+                  <PrivateRoute>
+                    <Suporte />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/enterprise-registration"
+                element={
+                  <PrivateRoute>
+                    <EnterpriseRegistration />
+                  </PrivateRoute>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </NotificationProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

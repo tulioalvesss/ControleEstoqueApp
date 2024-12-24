@@ -7,6 +7,7 @@ const userRoutes = require('./routes/userRoutes');
 const enterpriseRoutes = require('./routes/enterpriseRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const stockHistoryRoutes = require('./routes/stockHistoryRoutes');
+const supplierRoutes = require('./routes/supplierRoutes');
 require('./models/associations');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -55,6 +56,8 @@ app.use('/api/enterprises', enterpriseRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/stock-history', stockHistoryRoutes);
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/suppliers', supplierRoutes);
+
 
 // Rota básica de teste
 app.get('/', (req, res) => {
@@ -64,7 +67,7 @@ app.get('/', (req, res) => {
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Algo deu errado!' });
+  res.status(500).json({ message: 'Erro interno do servidor' });
 });
 
 // Modifique a parte onde você atualiza o produto
@@ -92,4 +95,6 @@ const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-}); 
+});
+
+module.exports = app; 

@@ -1,26 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const {
-  createEnterprise,
-  getEnterprise,
-  updateEnterprise,
+  create,
+  update,
+  getById,
+  getEnterpriseDetails,
   addUser,
-  removeUser,
-  getEnterpriseDetails
+  removeUser
 } = require('../controllers/enterpriseController');
-const { protect, authorize } = require('../middleware/authMiddleware');
 
-// Todas as rotas precisam de autenticação
-router.use(protect);
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
-// Criar empresa (qualquer usuário sem empresa pode criar)
-router.post('/', createEnterprise);
 
-// Rotas que precisam que o usuário pertença a uma empresa e seja admin
-router.get('/', authorize('admin'), getEnterprise);
-router.get('/details', authorize('admin'), getEnterpriseDetails);
-router.put('/', authorize('admin'), updateEnterprise);
-router.post('/users', authorize('admin'), addUser);
-router.delete('/users/:userId', authorize('admin'), removeUser);
+// Rota para criar empresa - acessível por qualquer usuário autenticado sem empresa
+router.post('/', protect, create);
 
+// Rotas que requerem autenticação e permissão de admin
+router.put('/:id', protect, authorize('admin'), update);
+router.get('/:id', protect, authorize('admin'), getById);
+
+router.get('/enterprise/users', protect, getEnterpriseDetails);
+router.post('/enterprise/users', protect, addUser);
+router.delete('/enterprise/users/:userId', protect, removeUser);
 module.exports = router;

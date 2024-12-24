@@ -90,9 +90,9 @@ const ModalEditUser = ({ open, handleClose, user, onSuccess }) => {
             onChange={handleChange}
             label="Tipo de Usuário"
           >
-            <MenuItem value="ADMIN">Administrador</MenuItem>
-            <MenuItem value="MANAGER">Gerente</MenuItem>
-            <MenuItem value="USER">Usuário</MenuItem>
+            <MenuItem value="admin">Administrador</MenuItem>
+            <MenuItem value="manager">Gerente</MenuItem>
+            <MenuItem value="employee">Usuário</MenuItem>
           </Select>
         </FormControl>
       </DialogContent>

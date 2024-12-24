@@ -8,24 +8,43 @@ import {
   Typography,
   Box,
   Alert,
+  CircularProgress
 } from '@mui/material';
-import { authService } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
     try {
-      await authService.login(formData);
-      navigate('/dashboard');
+      const { hasEnterprise } = await login(formData);
+      
+      // Redireciona com base no status da empresa
+      if (hasEnterprise) {
+        navigate('/dashboard');
+      } else {
+        navigate('/enterprise-registration');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Erro ao fazer login');
+      console.error('Erro detalhado:', err);
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'Erro ao fazer login. Por favor, verifique suas credenciais.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -59,6 +78,7 @@ const Login = () => {
               autoFocus
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              disabled={loading}
             />
             <TextField
               margin="normal"
@@ -70,14 +90,16 @@ const Login = () => {
               autoComplete="current-password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              disabled={loading}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              Entrar
+              {loading ? <CircularProgress size={24} /> : 'Entrar'}
             </Button>
           </form>
         </Paper>

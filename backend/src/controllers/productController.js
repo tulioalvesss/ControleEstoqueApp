@@ -3,6 +3,87 @@ const { sequelize } = require('../config/database');
 const { createStockHistory } = require('./stockHistoryController');
 const StockHistory = require('../models/StockHistory');
 const notificationController = require('./notificationController');
+const Enterprise = require('../models/Enterprise');
+const Category = require('../models/Category');
+const Supplier = require('../models/supplier');
+const EmailLog = require('../models/EmailLog');
+
+// Constantes para controle de frequência
+const MIN_MINUTES_BETWEEN_EMAILS = 6; // Mínimo de 6 minutos entre emails
+
+const sendTestEmail = async (product) => {
+  try {
+    // Verificar último email enviado
+    const lastEmail = await EmailLog.findOne({
+      where: { 
+        productId: product.id,
+        enterpriseId: product.enterpriseId
+      },
+      order: [['lastSentAt', 'DESC']]
+    });
+
+    // Verificar se já passou o tempo mínimo desde o último email
+    if (lastEmail) {
+      const minutesSinceLastEmail = (new Date() - new Date(lastEmail.lastSentAt)) / (1000 * 60);
+      
+      if (minutesSinceLastEmail < MIN_MINUTES_BETWEEN_EMAILS) {
+        console.log('----------------------------------------');
+        console.log('[AVISO] Email não enviado:');
+        console.log(`Último email enviado há ${Math.round(minutesSinceLastEmail)} minutos`);
+        console.log(`Aguarde ${Math.round(MIN_MINUTES_BETWEEN_EMAILS - minutesSinceLastEmail)} minutos para enviar novamente`);
+        console.log('----------------------------------------');
+        return;
+      }
+    }
+
+    // Buscar informações adicionais
+    const enterprise = await Enterprise.findByPk(product.enterpriseId);
+    const category = await Category.findByPk(product.categoryId);
+    const supplier = await Supplier.findOne({
+      where: { enterpriseId: product.enterpriseId }
+    });
+
+    // Verificações adicionais de segurança
+    if (!enterprise?.email || !supplier?.email) {
+      console.log('----------------------------------------');
+      console.log('[ERRO] Email não enviado:');
+      console.log('Faltam informações necessárias:');
+      if (!enterprise?.email) console.log('- Email da empresa não cadastrado');
+      if (!supplier?.email) console.log('- Email do fornecedor não cadastrado');
+      console.log('----------------------------------------');
+      return;
+    }
+
+    // Simular envio do email
+    console.log('----------------------------------------');
+    console.log('[EMAIL TESTE] Alerta de estoque baixo');
+    console.log('----------------------------------------');
+    console.log('Informações da Empresa:');
+    console.log(`Nome: ${enterprise.name}`);
+    console.log(`Email: ${enterprise.email}`);
+    console.log('----------------------------------------');
+    console.log('Informações do Fornecedor:');
+    console.log(`Nome: ${supplier.name}`);
+    console.log(`Email: ${supplier.email}`);
+    console.log('----------------------------------------');
+    console.log('Informações do Produto:');
+    console.log(`Nome: ${product.name}`);
+    console.log(`Categoria: ${category?.name || 'Não categorizado'}`);
+    console.log(`Quantidade atual: ${product.quantity}`);
+    console.log(`Quantidade mínima: ${product.minQuantity}`);
+    console.log('----------------------------------------');
+
+    // Registrar o envio do email
+    await EmailLog.create({
+      productId: product.id,
+      enterpriseId: product.enterpriseId,
+      lastSentAt: new Date()
+    });
+
+  } catch (error) {
+    console.error('Erro ao enviar email de teste:', error);
+  }
+};
 
 // Get all products
 exports.getProducts = async (req, res) => {
@@ -36,7 +117,7 @@ exports.createProduct = async (req, res) => {
     const productData = {
       ...req.body,
       enterpriseId: req.user.enterpriseId,
-      minQuantity: 20
+      minQuantity: req.body.minQuantity || 20
     };
     
     const product = await Product.create(productData);
@@ -79,8 +160,12 @@ exports.updateProduct = async (req, res) => {
 
     await product.update(req.body);
 
+    // Verificar se precisa enviar email de alerta
+    if (req.body.sendEmailAlert && product.quantity <= product.minQuantity) {
+      await sendTestEmail(product);
+    }
 
-    //se o nome do produto foi alterado, registra no histórico
+    // Resto do código de histórico permanece o mesmo
     if (req.body.name !== previousName) {
       await createStockHistory(
         product.id,
@@ -94,21 +179,21 @@ exports.updateProduct = async (req, res) => {
         product.name
       );
     }
+
     if (req.body.description !== previousDescription) {
       await createStockHistory(
         product.id,
         req.user.enterpriseId,
         previousQuantity,
         req.body.quantity,
-          'ajusteDescription',
-          'Atualização da descrição do produto. Descrição anterior: ' + previousDescription + ' - Descrição novo: ' + req.body.description,
+        'ajusteDescription',
+        'Atualização da descrição do produto. Descrição anterior: ' + previousDescription + ' - Descrição novo: ' + req.body.description,
         req.user.name,
         null,
         product.name
       );
     }
 
-    // Se a quantidade foi alterada, registra no histórico
     if (req.body.quantity !== undefined && previousQuantity !== req.body.quantity) {
       const changeType = req.body.quantity > previousQuantity ? 'entrada' : 'saida';
       await createStockHistory(
@@ -124,7 +209,6 @@ exports.updateProduct = async (req, res) => {
       );
     }
 
-    // se o valor do produto foi alterado, registra no histórico
     if (req.body.price !== undefined && previousValue !== req.body.price) {
       await createStockHistory(
         product.id,
@@ -138,10 +222,11 @@ exports.updateProduct = async (req, res) => {
         product.name
       );
     }
-    
+
     res.status(200).json(product);
   } catch (error) {
-    res.status(400).json({ 
+    console.error('Erro ao atualizar produto:', error);
+    res.status(500).json({ 
       message: error.message,
       errors: error.errors?.map(e => ({ field: e.path, message: e.message }))
     });

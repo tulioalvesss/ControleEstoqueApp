@@ -1,21 +1,19 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const Enterprise = require('./Enterprise');
 
-const Category = sequelize.define('Category', {
+const EmailLog = sequelize.define('EmailLog', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  name: {
-    type: DataTypes.STRING,
+  productId: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-    unique: true
-  },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    references: {
+      model: 'Products',
+      key: 'id'
+    }
   },
   enterpriseId: {
     type: DataTypes.INTEGER,
@@ -23,11 +21,15 @@ const Category = sequelize.define('Category', {
     references: {
       model: 'Enterprises',
       key: 'id'
-    },
-    onDelete: 'CASCADE'
+    }
+  },
+  lastSentAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
   }
+}, {
+  timestamps: true
 });
 
-Category.belongsTo(Enterprise, { foreignKey: 'enterpriseId' });
-
-module.exports = Category;
+module.exports = EmailLog; 

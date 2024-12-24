@@ -31,14 +31,15 @@ exports.getEnterprise = async (req, res) => {
   }
 };
 
-exports.createEnterprise = async (req, res) => {
+exports.create = async (req, res) => {
   try {
-    const { name, cnpj, email, phone, address, city, state, plan } = req.body;
+    const { name, cnpj, email, phone, address, city, state } = req.body;
+    const userId = req.user.id;
 
-    // Verificar se já existe empresa com este CNPJ
-    const enterpriseExists = await Enterprise.findOne({ where: { cnpj } });
-    if (enterpriseExists) {
-      return res.status(400).json({ message: 'Já existe uma empresa com este CNPJ' });
+    // Verificar se CNPJ já existe
+    const existingEnterprise = await Enterprise.findOne({ where: { cnpj } });
+    if (existingEnterprise) {
+      return res.status(400).json({ message: 'CNPJ já cadastrado' });
     }
 
     // Criar empresa
@@ -50,28 +51,35 @@ exports.createEnterprise = async (req, res) => {
       address,
       city,
       state,
-      plan: plan || 'basic'
+      status: 'active',
+      plan: 'basic'
     });
 
-    // Atualizar o usuário que criou a empresa como admin
-    const user = await User.findByPk(req.user.id);
-    await user.update({ 
-      enterpriseId: enterprise.id,
-      role: 'admin'
+    // Atualizar o usuário com o ID da empresa e torná-lo admin
+    await User.update(
+      { 
+        enterpriseId: enterprise.id,
+        role: 'admin'
+      },
+      { where: { id: userId } }
+    );
+
+    // Buscar usuário atualizado
+    const updatedUser = await User.findByPk(userId, {
+      attributes: { exclude: ['password'] },
+      include: [{
+        model: Enterprise,
+        as: 'enterprise',
+        attributes: ['id', 'name']
+      }]
     });
 
-    // Retornar empresa com dados do usuário atualizado
     res.status(201).json({
       enterprise,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        enterpriseId: user.enterpriseId
-      }
+      user: updatedUser
     });
   } catch (error) {
+    console.error('Erro ao criar empresa:', error);
     res.status(400).json({ 
       message: error.message,
       errors: error.errors?.map(e => ({ field: e.path, message: e.message }))
@@ -79,32 +87,45 @@ exports.createEnterprise = async (req, res) => {
   }
 };
 
-exports.updateEnterprise = async (req, res) => {
+exports.update = async (req, res) => {
   try {
-    const enterprise = await Enterprise.findByPk(req.user.enterpriseId);
+    const { id } = req.params;
+    const updates = req.body;
+
+    const enterprise = await Enterprise.findByPk(id);
+    if (!enterprise) {
+      return res.status(404).json({ message: 'Empresa não encontrada' });
+    }
+
+    // Verificar se o usuário pertence à empresa
+    if (enterprise.id !== req.user.enterpriseId) {
+      return res.status(403).json({ message: 'Acesso negado' });
+    }
+
+    await enterprise.update(updates);
+    res.json(enterprise);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const enterprise = await Enterprise.findByPk(id);
     
     if (!enterprise) {
       return res.status(404).json({ message: 'Empresa não encontrada' });
     }
 
-    const { name, email, phone, address, city, state } = req.body;
-
-    // Atualizar apenas campos permitidos
-    await enterprise.update({
-      name: name || enterprise.name,
-      email: email || enterprise.email,
-      phone: phone || enterprise.phone,
-      address: address || enterprise.address,
-      city: city || enterprise.city,
-      state: state || enterprise.state
-    });
+    // Verificar se o usuário pertence à empresa
+    if (enterprise.id !== req.user.enterpriseId) {
+      return res.status(403).json({ message: 'Acesso negado' });
+    }
 
     res.json(enterprise);
   } catch (error) {
-    res.status(400).json({ 
-      message: error.message,
-      errors: error.errors?.map(e => ({ field: e.path, message: e.message }))
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
