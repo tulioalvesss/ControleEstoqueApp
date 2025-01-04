@@ -1,4 +1,4 @@
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar, Box } from '@mui/material';
+import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar, Box, Divider } from '@mui/material';
 import { Dashboard, Inventory, BarChart, People, Settings, Help } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -13,6 +13,8 @@ const Sidebar = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
     { text: 'Produtos', icon: <Inventory />, path: '/produtos' },
+    { text: 'Setores', icon: <Inventory />, path: '/setores' },
+    { text: 'Estoque', icon: <Inventory />, path: '/estoque' },
     { text: 'Usuários', icon: <People />, path: '/usuarios' },
     { text: 'Relatórios', icon: <BarChart />, path: '/relatorios' },
     { text: 'Configurações', icon: <Settings />, path: '/configuracoes' },
@@ -23,41 +25,42 @@ const Sidebar = () => {
     <Drawer
       variant="permanent"
       sx={{
-        width: 240,
+        width: 280,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
-          width: 240,
+          width: 280,
           boxSizing: 'border-box',
-          color: '#121212',
-          bgcolor: '#e6e6e6',
-          borderRight: '1px solid rgba(255, 255, 255, 0.05)'
+          color: '#ffffff',
+          bgcolor: '#333333',
+          borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '20px 10px'
         },
       }}
     >
-      <Toolbar sx={{ bgcolor: '#1E1E1E' }} />
-      <List sx={{ padding: '16px 8px' }}>
+      <Toolbar sx={{ bgcolor: '#333333', minHeight: '64px' }} />
+      <List sx={{ padding: '0' }}>
         {menuItems.map((item) => (
           <ListItem 
             button 
             key={item.text} 
             onClick={() => navigate(item.path)}
             sx={{
-              borderRadius: '12px',
-              margin: '4px 0',
-              padding: '12px 16px',
+              borderRadius: '8px',
+              margin: '6px 0',
+              padding: '14px 20px',
               transition: 'all 0.3s ease',
               '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.08)',
-                transform: 'translateX(4px)'
+                bgcolor: 'rgba(255, 255, 255, 0.15)',
+                transform: 'translateX(6px)'
               },
               '& .MuiListItemIcon-root': {
-                color: '#121212',
+                color: '#ffffff',
                 minWidth: '40px'
               },
               '& .MuiListItemText-primary': {
-                fontSize: '0.95rem',
-                fontWeight: 500,
-                letterSpacing: '0.2px'
+                fontSize: '1rem',
+                fontWeight: 600,
+                letterSpacing: '0.3px'
               }
             }}
           >
@@ -67,27 +70,28 @@ const Sidebar = () => {
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
+        <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', margin: '10px 0' }} />
         <ListItem 
           button
           onClick={() => navigate('/notificacoes')}
           sx={{
-            borderRadius: '12px',
-            margin: '4px 0',
-            padding: '12px 16px',
+            borderRadius: '8px',
+            margin: '6px 0',
+            padding: '14px 20px',
             transition: 'all 0.3s ease',
             '&:hover': {
-              bgcolor: 'rgba(255, 255, 255, 0.08)',
-              transform: 'translateX(4px)'
+              bgcolor: 'rgba(255, 255, 255, 0.15)',
+              transform: 'translateX(6px)'
             },
             '& .MuiListItemIcon-root': {
-              color: '#121212',
+              color: '#ffffff',
               minWidth: '40px',
               position: 'relative'
             },
             '& .MuiListItemText-primary': {
-              fontSize: '0.95rem',
-              fontWeight: 500,
-              letterSpacing: '0.2px'
+              fontSize: '1rem',
+              fontWeight: 600,
+              letterSpacing: '0.3px'
             }
           }}
         >
@@ -102,12 +106,12 @@ const Sidebar = () => {
                   bgcolor: 'error.main',
                   color: 'white',
                   borderRadius: '50%',
-                  width: 16,
-                  height: 16,
+                  width: 18,
+                  height: 18,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '0.7rem',
+                  fontSize: '0.75rem',
                 }}
               >
                 {unreadCount}

@@ -9,49 +9,27 @@ const Product = sequelize.define('Product', {
   },
   name: {
     type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      notEmpty: { msg: 'Nome do produto é obrigatório' }
-    }
+    allowNull: false
   },
   description: {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  price: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
+  },
   sku: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
-    validate: {
-      notEmpty: { msg: 'SKU é obrigatório' }
-    }
+    unique: true
   },
-  quantity: {
+  sectorId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    validate: {
-      min: { args: [0], msg: 'Quantidade não pode ser negativa' }
-    }
-  },
-  price: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    validate: {
-      min: { args: [0], msg: 'Preço não pode ser negativo' }
-    }
-  },
-  categoryId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      notEmpty: { msg: 'Categoria é obrigatória' }
-    }
-  },
-  minQuantity: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-    validate: {
-      min: { args: [0], msg: 'Quantidade mínima não pode ser negativa' }
+    references: {
+      model: 'Sectors',
+      key: 'id'
     }
   },
   enterpriseId: {
@@ -62,13 +40,13 @@ const Product = sequelize.define('Product', {
       key: 'id'
     }
   },
-  sendEmailAlert: {
+  isComposite: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    allowNull: false
+    allowNull: false,
+    defaultValue: true
   }
 }, {
-  timestamps: true
+  tableName: 'Products'
 });
 
 module.exports = Product; 

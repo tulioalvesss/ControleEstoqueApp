@@ -15,10 +15,12 @@ import Perfil from './pages/Perfil';
 import Notificacoes from './pages/Notificacao';
 import Configuracoes from './pages/Configuracoes';
 import EnterpriseRegistration from './pages/EnterpriseRegistration';
+import  Setores  from './pages/Setores';
+import Estoque from './pages/Estoque';
 
 const theme = createTheme({
-  palette: {
-    primary: {
+    palette: {
+      primary: {
       main: '#1976d2',
     },
     secondary: {
@@ -109,6 +111,22 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/setores"
+                element={
+                  <PrivateRoute>
+                    <Setores />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/estoque"
+                element={
+                  <PrivateRoute>
+                    <Estoque />
+                  </PrivateRoute>
+                }
+              />
             </Routes>
           </BrowserRouter>
         </NotificationProvider>
@@ -117,4 +135,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

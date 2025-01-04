@@ -40,7 +40,11 @@ const Users = () => {
   const loadUsers = async () => {
     try {
       const data = await enterpriseUsersService.getUsers();
-      setUsers(data);
+      if (data) {
+        setUsers(data);
+      } else {
+        setError('Não foi possivel carregar os usuarios');
+      }
     } catch (err) {
       setError('Erro ao carregar usuários');
       console.error(err);

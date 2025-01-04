@@ -2,7 +2,8 @@ import api from './api';
 
 export const supplierService = {
   getAll: async () => {
-    const response = await api.get('/api/suppliers');
+    const enterpriseId = localStorage.getItem('enterpriseId');
+    const response = await api.get(`/api/suppliers/${enterpriseId}`);
     return response.data.map(supplier => ({
       ...supplier,
       id: supplier.id

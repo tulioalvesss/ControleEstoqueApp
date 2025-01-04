@@ -12,15 +12,15 @@ import {
   Button
 } from '@mui/material';
 import MainLayout from '../components/layout/MainLayout';
-import { categoryService } from '../services/categoryService';
+import { sectorService } from '../services/sectorService';
 import { supplierService } from '../services/supplierService';
 import ModalEditSupplier from '../components/componentsSupplier/modalEditSupplier';
 
 const Configuracoes = () => {
   const [minStock, setMinStock] = useState(10);
-  const [categories, setCategories] = useState([]);
+  const [sectors, setSectors] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSector, setSelectedSector] = useState('');
   const [newSupplier, setNewSupplier] = useState({
     name: '',
     email: '',
@@ -32,11 +32,11 @@ const Configuracoes = () => {
 
   const loadData = async () => {
     try {
-      const [categoriesData, suppliersData] = await Promise.all([
-        categoryService.getAll(),
+      const [sectorsData, suppliersData] = await Promise.all([
+        sectorService.getSectors(),
         supplierService.getAll()
       ]);
-      setCategories(categoriesData);
+      setSectors(sectorsData);
       setSuppliers(suppliersData);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -48,17 +48,17 @@ const Configuracoes = () => {
   }, [refreshKey]);
 
   const handleAddSupplier = async () => {
-    if (selectedCategory && newSupplier.name) {
+    if (selectedSector && newSupplier.name) {
       try {
         const createdSupplier = await supplierService.create({
           name: newSupplier.name,
           email: newSupplier.email,
           phone: newSupplier.phone,
-          categoryId: selectedCategory
+          sectorId: selectedSector
         });
         setSuppliers([...suppliers, createdSupplier]);
         setNewSupplier({ name: '', email: '', phone: '' });
-        setSelectedCategory('');
+        setSelectedSector('');
       } catch (error) {
         console.error('Erro ao adicionar fornecedor:', error);
       }
@@ -74,9 +74,9 @@ const Configuracoes = () => {
     }
   };
 
-  const getCategoryName = (categoryId) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Categoria não encontrada';
+  const getSectorName = (sectorId) => {
+    const sector = sectors.find(sec => sec.id === sectorId);
+    return sector ? sector.name : 'Setor não encontrado';
   };
 
   const handleEditSupplier = async (id, updatedSupplier) => {
@@ -106,15 +106,15 @@ const Configuracoes = () => {
             </Typography>
             
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Categoria</InputLabel>
+              <InputLabel>Setor</InputLabel>
               <Select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                label="Categoria"
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                label="Setor"
               >
-                {categories.map((category) => (
-                  <MenuItem key={category.id} value={category.id}>
-                    {category.name}
+                {sectors.map((sector) => (
+                  <MenuItem key={sector.id} value={sector.id}>
+                    {sector.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -175,7 +175,7 @@ const Configuracoes = () => {
                         {supplier.name}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Categoria: {getCategoryName(supplier.categoryId)}
+                        Setor: {getSectorName(supplier.sectorId)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Email: {supplier.email}
@@ -238,7 +238,6 @@ const Configuracoes = () => {
           setSelectedSupplier(null);
         }}
         supplier={selectedSupplier}
-        categories={categories}
         onEdit={handleEditSupplier}
       />
     </MainLayout>

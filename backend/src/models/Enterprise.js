@@ -77,9 +77,9 @@ Enterprise.associate = (models) => {
     as: 'suppliers'
   });
 
-  Enterprise.hasMany(models.Category, {
+  Enterprise.hasMany(models.Sector, {
     foreignKey: 'enterpriseId',
-    as: 'categories'
+    as: 'sectors'
   });
 };
 

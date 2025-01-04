@@ -1,8 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const Enterprise = require('./Enterprise');
 
-const Category = sequelize.define('Category', {
+const Stock = sequelize.define('Stock', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -10,12 +9,15 @@ const Category = sequelize.define('Category', {
   },
   name: {
     type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    allowNull: false
   },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: true
+  sectorId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'Sectors',
+      key: 'id'
+    }
   },
   enterpriseId: {
     type: DataTypes.INTEGER,
@@ -23,11 +25,8 @@ const Category = sequelize.define('Category', {
     references: {
       model: 'Enterprises',
       key: 'id'
-    },
-    onDelete: 'CASCADE'
+    }
   }
 });
 
-Category.belongsTo(Enterprise, { foreignKey: 'enterpriseId' });
-
-module.exports = Category;
+module.exports = Stock;

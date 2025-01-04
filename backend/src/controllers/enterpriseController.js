@@ -214,42 +214,19 @@ exports.getEnterpriseDetails = async (req, res) => {
           model: User,
           as: 'users',
           attributes: ['id', 'name', 'email', 'role']
-        },
-        {
-          model: Product,
-          as: 'products',
-          attributes: ['id', 'name', 'sku', 'quantity', 'price', 'categoryId']
         }
+        // ... outros includes se necessário
       ]
     });
-
+    
     if (!enterprise) {
       return res.status(404).json({ message: 'Empresa não encontrada' });
     }
 
-    // Formatar os dados para a resposta
-    const response = {
-      id: enterprise.id,
-      name: enterprise.name,
-      cnpj: enterprise.cnpj,
-      email: enterprise.email,
-      phone: enterprise.phone,
-      address: enterprise.address,
-      city: enterprise.city,
-      state: enterprise.state,
-      plan: enterprise.plan,
-      status: enterprise.status,
-      createdAt: enterprise.createdAt,
-      statistics: {
-        totalUsers: enterprise.users.length,
-        totalProducts: enterprise.products.length,
-        lowStockProducts: enterprise.products.filter(p => p.quantity <= p.minQuantity).length
-      },
-      users: enterprise.users,
-      recentProducts: enterprise.products.slice(0, 5) // Últimos 5 produtos
-    };
-
-    res.json(response);
+    // Simplificando a resposta para retornar apenas os usuários
+    res.json({
+      users: enterprise.users || []
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

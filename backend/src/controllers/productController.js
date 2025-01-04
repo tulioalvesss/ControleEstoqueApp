@@ -2,95 +2,31 @@ const Product  = require('../models/Product');
 const { sequelize } = require('../config/database');
 const { createStockHistory } = require('./stockHistoryController');
 const StockHistory = require('../models/StockHistory');
-const notificationController = require('./notificationController');
 const Enterprise = require('../models/Enterprise');
-const Category = require('../models/Category');
+const Sector = require('../models/Sector');
 const Supplier = require('../models/supplier');
 const EmailLog = require('../models/EmailLog');
+const ProductComponent = require('../models/ProductComponent');
+const Stock = require('../models/Stock');
+const StockComponent = require('../models/StockComponent');
 
-// Constantes para controle de frequência
-const MIN_MINUTES_BETWEEN_EMAILS = 6; // Mínimo de 6 minutos entre emails
 
-const sendTestEmail = async (product) => {
-  try {
-    // Verificar último email enviado
-    const lastEmail = await EmailLog.findOne({
-      where: { 
-        productId: product.id,
-        enterpriseId: product.enterpriseId
-      },
-      order: [['lastSentAt', 'DESC']]
-    });
-
-    // Verificar se já passou o tempo mínimo desde o último email
-    if (lastEmail) {
-      const minutesSinceLastEmail = (new Date() - new Date(lastEmail.lastSentAt)) / (1000 * 60);
-      
-      if (minutesSinceLastEmail < MIN_MINUTES_BETWEEN_EMAILS) {
-        console.log('----------------------------------------');
-        console.log('[AVISO] Email não enviado:');
-        console.log(`Último email enviado há ${Math.round(minutesSinceLastEmail)} minutos`);
-        console.log(`Aguarde ${Math.round(MIN_MINUTES_BETWEEN_EMAILS - minutesSinceLastEmail)} minutos para enviar novamente`);
-        console.log('----------------------------------------');
-        return;
-      }
-    }
-
-    // Buscar informações adicionais
-    const enterprise = await Enterprise.findByPk(product.enterpriseId);
-    const category = await Category.findByPk(product.categoryId);
-    const supplier = await Supplier.findOne({
-      where: { enterpriseId: product.enterpriseId }
-    });
-
-    // Verificações adicionais de segurança
-    if (!enterprise?.email || !supplier?.email) {
-      console.log('----------------------------------------');
-      console.log('[ERRO] Email não enviado:');
-      console.log('Faltam informações necessárias:');
-      if (!enterprise?.email) console.log('- Email da empresa não cadastrado');
-      if (!supplier?.email) console.log('- Email do fornecedor não cadastrado');
-      console.log('----------------------------------------');
-      return;
-    }
-
-    // Simular envio do email
-    console.log('----------------------------------------');
-    console.log('[EMAIL TESTE] Alerta de estoque baixo');
-    console.log('----------------------------------------');
-    console.log('Informações da Empresa:');
-    console.log(`Nome: ${enterprise.name}`);
-    console.log(`Email: ${enterprise.email}`);
-    console.log('----------------------------------------');
-    console.log('Informações do Fornecedor:');
-    console.log(`Nome: ${supplier.name}`);
-    console.log(`Email: ${supplier.email}`);
-    console.log('----------------------------------------');
-    console.log('Informações do Produto:');
-    console.log(`Nome: ${product.name}`);
-    console.log(`Categoria: ${category?.name || 'Não categorizado'}`);
-    console.log(`Quantidade atual: ${product.quantity}`);
-    console.log(`Quantidade mínima: ${product.minQuantity}`);
-    console.log('----------------------------------------');
-
-    // Registrar o envio do email
-    await EmailLog.create({
-      productId: product.id,
-      enterpriseId: product.enterpriseId,
-      lastSentAt: new Date()
-    });
-
-  } catch (error) {
-    console.error('Erro ao enviar email de teste:', error);
-  }
-};
+// Produto precisa ser composto por itens do estoque, ex: capirinha deve ter 5 uvas e 10 bananas descontar os itens do estoque diretamente
+// Nova maneira de add itens ao estoque, deve ser possivel adicionar itens ao estoque, por exemplo uva e banana.
+// quando um produto for consumido, deve ser possivel descontar os itens do estoque diretamente.
 
 // Get all products
 exports.getProducts = async (req, res) => {
   try {
     const products = await Product.findAll({
-      where: { enterpriseId: req.user.enterpriseId }
+      where: { enterpriseId: req.user.enterpriseId },
+      include: [{
+        model: StockComponent,
+        as: 'components',
+        through: { attributes: ['quantity'] }
+      }]
     });
+
     res.status(200).json(products);
   } catch (error) {
     console.error('Erro ao buscar produtos:', error);
@@ -113,30 +49,70 @@ exports.getProduct = async (req, res) => {
 
 // Create product
 exports.createProduct = async (req, res) => {
+  const t = await sequelize.transaction();
+  
   try {
-    const productData = {
-      ...req.body,
-      enterpriseId: req.user.enterpriseId,
-      minQuantity: req.body.minQuantity || 20
-    };
+    const { 
+      name, 
+      description, 
+      price, 
+      sku, 
+      sectorId, 
+      isComposite,
+      components 
+    } = req.body;
     
-    const product = await Product.create(productData);
+    const enterpriseId = req.user.enterpriseId;
 
-    // Registra a entrada inicial no histórico
-    await createStockHistory(
-      product.id,
-      req.user.enterpriseId,
-      0, // quantidade anterior
-      product.quantity, // quantidade inicial
-      'entrada',
-      'Cadastro inicial do produto',
-      req.user.name,
-      null,
-      product.name
-    );
+    // Verifica se já existe um produto com o mesmo SKU na empresa
+    const existingProduct = await Product.findOne({
+      where: { 
+        sku,
+        enterpriseId
+      }
+    });
 
-    res.status(201).json(product);
+    if (existingProduct) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Já existe um produto com este SKU' });
+    }
+
+    // Cria o produto
+    const product = await Product.create({
+      name,
+      description,
+      price,
+      sku,
+      sectorId,
+      enterpriseId,
+      isComposite
+    }, { transaction: t });
+
+    // Se for um produto composto, cria os componentes
+    if (isComposite && components?.length > 0) {
+      const productComponents = components.map(comp => ({
+        productId: product.id,
+        componentId: comp.componentId,
+        quantity: comp.quantity
+      }));
+
+      await ProductComponent.bulkCreate(productComponents, { transaction: t });
+    }
+
+    await t.commit();
+
+    // Retorna o produto com seus componentes
+    const createdProduct = await Product.findByPk(product.id, {
+      include: [{
+        model: StockComponent,
+        as: 'components',
+        through: { attributes: ['quantity'] }
+      }]
+    });
+
+    res.status(201).json(createdProduct);
   } catch (error) {
+    await t.rollback();
     console.error('Erro ao criar produto:', error);
     res.status(400).json({ 
       message: error.message,
@@ -352,4 +328,28 @@ exports.updateStock = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+// Adicionar método para calcular quantidade disponível
+exports.calculateAvailableQuantity = async (productId) => {
+  const product = await Product.findByPk(productId, {
+    include: [{
+      model: Stock,
+      as: 'components',
+      through: { attributes: ['quantity'] }
+    }]
+  });
+
+  if (!product.isComposite) return null;
+
+  let maxQuantity = Infinity;
+  
+  for (const component of product.components) {
+    const stockQuantity = component.quantity;
+    const requiredQuantity = component.ProductComponent.quantity;
+    const possibleQuantity = Math.floor(stockQuantity / requiredQuantity);
+    maxQuantity = Math.min(maxQuantity, possibleQuantity);
+  }
+
+  return maxQuantity;
 }; 

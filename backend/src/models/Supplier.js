@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const Category = require('./Category');
+const Sector = require('./Sector');
 const Enterprise = require('./Enterprise');
 
 
@@ -25,7 +25,7 @@ const Supplier = sequelize.define('Supplier', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  categoryId:{
+  sectorId:{
     type: DataTypes.INTEGER,
     allowNull: false
   },
@@ -35,7 +35,7 @@ const Supplier = sequelize.define('Supplier', {
   }
 });
 
-Supplier.belongsTo(Category, { foreignKey: 'categoryId' });
+Supplier.belongsTo(Sector, { foreignKey: 'sectorId' });
 Supplier.belongsTo(Enterprise, { foreignKey: 'enterpriseId' });
 
 module.exports = Supplier;

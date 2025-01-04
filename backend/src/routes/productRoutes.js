@@ -28,7 +28,7 @@ router.put('/:id/stock', protect, updateStock);
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, quantity, categoryId } = req.body;
+    const { name, description, price, quantity, sectorId } = req.body;
     const enterpriseId = req.user.enterpriseId;
 
     const product = await Product.findOne({
@@ -47,7 +47,7 @@ router.put('/:id', async (req, res) => {
       description,
       price,
       quantity,
-      categoryId
+      sectorId
     });
 
     // Cria histórico de estoque se a quantidade foi alterada

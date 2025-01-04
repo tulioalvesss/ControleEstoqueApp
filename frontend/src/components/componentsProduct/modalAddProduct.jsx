@@ -8,137 +8,128 @@ import {
   Button,
   Alert,
   FormControl,
-  FormControlLabel,
-  Checkbox,
   InputLabel,
   Select,
   MenuItem,
   Box,
   Typography,
-  Divider,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import { productService } from '../../services/productService';
-import { categoryService } from '../../services/categoryService';
+import { sectorService } from '../../services/sectorService';
+import { productComponentsService } from '../../services/productComponentsService';
 
 const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
-  const initialFormState = {
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
-    quantity: '',
-    categoryId: '',
-    SKU: '',
-    minQuantity: '',
-    sendEmailAlert: false,
-  };
+    sectorId: '',
+    sku: '',
+    isComposite: true
+  });
 
-  const [formData, setFormData] = useState(initialFormState);
-
-  const [categories, setCategories] = useState([]);
-  const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newCategory, setNewCategory] = useState({ name: '', description: '', enterpriseId: '' });
+  const [sectors, setSectors] = useState([]);
+  const [availableComponents, setAvailableComponents] = useState([]);
+  const [selectedComponents, setSelectedComponents] = useState([]);
   const [error, setError] = useState('');
+  const [componentForm, setComponentForm] = useState({
+    componentId: '',
+    quantity: ''
+  });
 
   useEffect(() => {
-    loadCategories();
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      setFormData(initialFormState);
+    if (open) {
+      loadInitialData();
+    } else {
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        sectorId: '',
+        sku: '',
+        isComposite: true
+      });
+      setSelectedComponents([]);
       setError('');
-      setNewCategory({ name: '', description: '', enterpriseId: '' });
-      setShowNewCategory(false);
     }
   }, [open]);
 
-  const loadCategories = async () => {
+  const loadInitialData = async () => {
     try {
-      const data = await categoryService.getAll();
-      setCategories(data);
+      setError('');
+      const [sectorsData, componentsData] = await Promise.all([
+        sectorService.getSectors(),
+        productComponentsService.getAvailableComponents()
+      ]);
+      
+      if (sectorsData) {
+        setSectors(sectorsData);
+      }
+      
+      if (componentsData) {
+        setAvailableComponents(componentsData);
+      }
     } catch (err) {
-      setError('Erro ao carregar categorias');
-      console.error(err);
+      console.error('Erro ao carregar dados:', err);
+      setError(err.message || 'Erro ao carregar dados iniciais');
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'price' || name === 'quantity') {
-      if (value === '' || (!isNaN(value) && value >= 0)) {
-        setFormData(prevState => ({
-          ...prevState,
-          [name]: value
-        }));
-      }
-    } else {
-      setFormData(prevState => ({
-        ...prevState,
-        [name]: value
-      }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (name === 'sectorId') {
+      setSelectedComponents([]);
+      setComponentForm({ componentId: '', quantity: '' });
     }
   };
 
-  const handleNewCategoryChange = (e) => {
+  const handleComponentFormChange = (e) => {
     const { name, value } = e.target;
-    setNewCategory(prevState => ({
-      ...prevState,
+    setComponentForm(prev => ({
+      ...prev,
       [name]: value
     }));
   };
 
-  const handleCreateCategory = async () => {
-    try {
-      const enterpriseId = localStorage.getItem('enterpriseId');
-      const categoryData = {
-        ...newCategory,
-        enterpriseId
-      };
-      const createdCategory = await categoryService.create(categoryData);
-      setCategories([...categories, createdCategory]);
-      setFormData(prevState => ({
-        ...prevState,
-        categoryId: createdCategory.id
-      }));
-      setShowNewCategory(false);
-      setNewCategory({ name: '', description: ''});
-    } catch (err) {
-      setError('Erro ao criar categoria');
-      console.error(err);
+  const addComponent = () => {
+    if (!componentForm.componentId || !componentForm.quantity) {
+      setError('Selecione um componente e especifique a quantidade');
+      return;
     }
+
+    const component = availableComponents.find(c => c.id === componentForm.componentId);
+    if (!component) return;
+
+    setSelectedComponents(prev => [
+      ...prev,
+      {
+        componentId: component.id,
+        name: component.name,
+        quantity: Number(componentForm.quantity),
+        unit: component.unit
+      }
+    ]);
+
+    setComponentForm({ componentId: '', quantity: '' });
   };
 
-  const validateForm = () => {
-    
-    if (!formData.name.trim()) {
-      setError('Nome do produto é obrigatório');
-      return false;
-    }
-    if (!formData.SKU.trim()) {
-      setError('SKU é obrigatório');
-      return false;
-    }
-    if (!formData.price || Number(formData.price) <= 0) {
-      setError('Preço deve ser maior que zero');
-      return false;
-    }
-    if (!formData.quantity || Number(formData.quantity) < 0) {
-      setError('Quantidade não pode ser negativa');
-      return false;
-    }
-    if (!formData.categoryId) {
-      setError('Categoria é obrigatória');
-      return false;
-    }
-
-    // Validar se os IDs são números válidos
-    if (isNaN(parseInt(formData.categoryId))) {
-      setError('Categoria inválida');
-      return false;
-    }
-
-    return true;
+  const removeComponent = (index) => {
+    setSelectedComponents(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -146,234 +137,178 @@ const ModalAddProduct = ({ open, handleClose, onSuccess }) => {
     setError('');
 
     try {
-      if (!validateForm()) {
+      if (!formData.name || !formData.sku || !formData.price || !formData.sectorId) {
+        setError('Preencha todos os campos obrigatórios');
         return;
       }
 
-      const enterpriseId = localStorage.getItem('enterpriseId');
-      
-      if (!enterpriseId) {
-        setError('ID da empresa não encontrado');
+      if (selectedComponents.length === 0) {
+        setError('Adicione pelo menos um componente ao produto');
         return;
       }
 
       const productData = {
-        name: formData.name,
-        description: formData.description || '',
-        sku: formData.SKU,
-        price: Number(formData.price) || 0,
-        quantity: Number(formData.quantity) || 0,
-        categoryId: Number(formData.categoryId),
-        enterpriseId: Number(enterpriseId),
-        minQuantity: Number(formData.minQuantity) || 0,
-        sendEmailAlert: Boolean(formData.sendEmailAlert)
+        ...formData,
+        price: Number(formData.price),
+        components: selectedComponents
       };
 
       await productService.create(productData);
       onSuccess();
-      setFormData(initialFormState);
       handleClose();
     } catch (err) {
-      console.error('Erro ao criar produto:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Erro ao criar produto';
-      setError(errorMessage);
+      setError(err.response?.data?.message || 'Erro ao criar produto');
     }
   };
 
-  const handleCloseModal = () => {
-    setFormData(initialFormState);
-    handleClose();
-  };
+
+  const filteredComponents = availableComponents.filter(
+    component => String(component.Stock?.sectorId) === String(formData.sectorId)
+  );
+
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleCloseModal} 
-      maxWidth="sm" 
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          boxShadow: 3
-        }
-      }}
-    >
-      <DialogTitle sx={{ 
-        bgcolor: 'primary.main', 
-        color: 'white',
-        py: 2
-      }}>
-        Adicionar Novo Produto
-      </DialogTitle>
-      
-      <DialogContent sx={{ p: 3 }}>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <DialogTitle>Novo Produto Composto</DialogTitle>
+      <DialogContent>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-        
-        <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 , marginTop: 2}}>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
           <TextField
-            autoFocus
             name="name"
             label="Nome do Produto"
-            type="text"
-            fullWidth
             value={formData.name}
             onChange={handleChange}
-            variant="outlined"
+            required
           />
-          
+
           <TextField
             name="description"
             label="Descrição"
-            type="text"
-            fullWidth
+            multiline
+            rows={2}
             value={formData.description}
             onChange={handleChange}
-            variant="outlined"
-            multiline
-            rows={3}
           />
-          <Box>
-            <TextField
-              name="SKU"
-              label="SKU"
-              type="text"
-              fullWidth
-              required
-              value={formData.SKU}
-              onChange={handleChange}
-              variant="outlined"
-              error={!formData.SKU.trim()}
-              helperText={!formData.SKU.trim() ? 'SKU é obrigatório' : ''}
-            />
-          </Box>
+
           <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              name="sku"
+              label="sku"
+              value={formData.sku}
+              onChange={handleChange}
+              required
+            />
+
             <TextField
               name="price"
               label="Preço"
               type="number"
               value={formData.price}
               onChange={handleChange}
-              variant="outlined"
-              fullWidth
-            />
-            
-            <TextField
-              name="quantity"
-              label="Quantidade"
-              type="number"
-              value={formData.quantity}
-              onChange={handleChange}
-              variant="outlined"
-              fullWidth
-            />
-            <TextField
-              name="minQuantity"
-              label="Quantidade Mínima"
-              type="number"
-              value={formData.minQuantity}
-              onChange={handleChange}
-              variant="outlined"
-              fullWidth
+              required
             />
           </Box>
 
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Categoria</InputLabel>
+          <FormControl fullWidth>
+            <InputLabel>Setor</InputLabel>
             <Select
-              name="categoryId"
-              value={formData.categoryId}
+              name="sectorId"
+              value={formData.sectorId}
               onChange={handleChange}
-              label="Categoria"
+              label="Setor"
+              required
             >
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
+              {sectors.map((sector) => (
+                <MenuItem key={sector.id} value={sector.id}>
+                  {sector.name}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          <Button
-            variant="outlined"
-            onClick={() => setShowNewCategory(!showNewCategory)}
-            sx={{ alignSelf: 'flex-start' }}
-          >
-            {showNewCategory ? 'Cancelar Nova Categoria' : 'Criar Nova Categoria'}
-          </Button>
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Componentes do Produto
+          </Typography>
 
-          {showNewCategory && (
-            <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
-              <Typography variant="h6" gutterBottom color="primary">
-                Nova Categoria
-              </Typography>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <TextField
-                  name="name"
-                  label="Nome da Categoria"
-                  type="text"
-                  fullWidth
-                  value={newCategory.name}
-                  onChange={handleNewCategoryChange}
-                  variant="outlined"
-                />
-                
-                <TextField
-                  name="description"
-                  label="Descrição da Categoria"
-                  type="text"
-                  fullWidth
-                  value={newCategory.description}
-                  onChange={handleNewCategoryChange}
-                  variant="outlined"
-                  multiline
-                  rows={2}
-                />
-                
-                <Button
-                  variant="contained"
-                  onClick={handleCreateCategory}
-                  disabled={!newCategory.name}
-                  sx={{ alignSelf: 'flex-start' }}
-                >
-                  Criar Categoria
-                </Button>
-              </Box>
-            </Paper>
-          )}
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Componente</InputLabel>
+              <Select
+                name="componentId"
+                value={componentForm.componentId}
+                onChange={handleComponentFormChange}
+                label="Componente"
+                disabled={!formData.sectorId}
+              >
+                {filteredComponents.map((component) => (
+                  <MenuItem key={component.id} value={component.id}>
+                    {component.name} ({component.unit})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.sendEmailAlert}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  sendEmailAlert: e.target.checked
-                })}
-              />
-            }
-            label="Enviar alerta por email quando estoque estiver baixo"
-          />
+            <TextField
+              name="quantity"
+              label="Quantidade"
+              type="number"
+              value={componentForm.quantity}
+              onChange={handleComponentFormChange}
+              sx={{ width: 150 }}
+              disabled={!formData.sectorId}
+            />
+
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={addComponent}
+              disabled={!formData.sectorId}
+            >
+              Adicionar
+            </Button>
+          </Box>
+
+          <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Componente</TableCell>
+                  <TableCell align="right">Quantidade</TableCell>
+                  <TableCell align="right">Unidade</TableCell>
+                  <TableCell align="center">Ações</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedComponents.map((component, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{component.name}</TableCell>
+                    <TableCell align="right">{component.quantity}</TableCell>
+                    <TableCell align="right">{component.unit}</TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => removeComponent(index)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Box>
       </DialogContent>
-
-      <DialogActions sx={{ p: 3, gap: 1 }}>
-        <Button 
-          onClick={handleCloseModal}
-          variant="outlined"
-        >
-          Cancelar
-        </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained"
-          disabled={!formData.name || !formData.categoryId}
-        >
-          Adicionar Produto
+      <DialogActions>
+        <Button onClick={handleClose}>Cancelar</Button>
+        <Button onClick={handleSubmit} variant="contained">
+          Criar Produto
         </Button>
       </DialogActions>
     </Dialog>

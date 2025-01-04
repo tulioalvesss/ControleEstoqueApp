@@ -1,10 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
-// email log esta inativo
-
-
-const EmailLog = sequelize.define('EmailLog', {
+const ProductComponent = sequelize.define('ProductComponent', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -18,21 +15,21 @@ const EmailLog = sequelize.define('EmailLog', {
       key: 'id'
     }
   },
-  enterpriseId: {
+  componentId: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Enterprises',
+      model: 'StockComponents',
       key: 'id'
     }
   },
-  lastSentAt: {
-    type: DataTypes.DATE,
+  quantity: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-    defaultValue: DataTypes.NOW
+    defaultValue: 1
   }
 }, {
-  timestamps: true
+  tableName: 'ProductComponents'
 });
 
-module.exports = EmailLog; 
+module.exports = ProductComponent; 

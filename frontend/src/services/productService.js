@@ -15,29 +15,38 @@ export const productService = {
     try {
       const response = await api.post('/api/products', {
         ...productData,
-        sendEmailAlert: productData.sendEmailAlert || false
+        sendEmailAlert: productData.sendEmailAlert || false,
+        isComposite: true
       });
       return response.data;
     } catch (error) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
       throw error;
     }
   },
 
   update: async (id, productData) => {
-    const userId = localStorage.getItem('userId');
-    const response = await api.put(`/api/products/${id}`, productData);
-    if (userId) {
-      await productService.checkLowStock(response.data, userId);
+    try {
+      const response = await api.put(`/api/products/${id}`, productData);
+      return response.data;
+    } catch (error) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
     }
-    return response.data;
   },
 
   delete: async (id) => {
     try {
-      const response = await api.delete(`/api/products/${id}`);
-      return response.data;
+      await api.delete(`/api/products/${id}`);
     } catch (error) {
-      throw error.response?.data || error;
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
     }
   },
 

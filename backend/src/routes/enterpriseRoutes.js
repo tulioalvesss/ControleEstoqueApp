@@ -16,10 +16,11 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 router.post('/', protect, create);
 
 // Rotas que requerem autenticação e permissão de admin
+router.get('/users', protect, getEnterpriseDetails);
+router.post('/users', protect, addUser);
+router.delete('/users/:userId', protect, removeUser);
+
 router.put('/:id', protect, authorize('admin'), update);
 router.get('/:id', protect, authorize('admin'), getById);
 
-router.get('/enterprise/users', protect, getEnterpriseDetails);
-router.post('/enterprise/users', protect, addUser);
-router.delete('/enterprise/users/:userId', protect, removeUser);
 module.exports = router;

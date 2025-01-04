@@ -12,12 +12,12 @@ import {
   MenuItem,
 } from '@mui/material';
 
-const ModalEditSupplier = ({ open, handleClose, supplier, categories, onEdit }) => {
+const ModalEditSupplier = ({ open, handleClose, supplier, onEdit }) => {
   const [editedSupplier, setEditedSupplier] = useState({
     name: '',
     email: '',
     phone: '',
-    categoryId: ''
+    sectorId: ''
   });
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const ModalEditSupplier = ({ open, handleClose, supplier, categories, onEdit }) 
         name: supplier.name || '',
         email: supplier.email || '',
         phone: supplier.phone || '',
-        categoryId: supplier.categoryId || ''
+        sectorId: supplier.sectorId || ''
       });
     }
   }, [supplier]);
@@ -45,18 +45,8 @@ const ModalEditSupplier = ({ open, handleClose, supplier, categories, onEdit }) 
       <DialogTitle>Editar Fornecedor</DialogTitle>
       <DialogContent>
         <FormControl fullWidth sx={{ mt: 2 }}>
-          <InputLabel>Categoria</InputLabel>
-          <Select
-            value={editedSupplier.categoryId}
-            onChange={(e) => setEditedSupplier({...editedSupplier, categoryId: e.target.value})}
-            label="Categoria"
-          >
-            {categories.map((category) => (
-              <MenuItem key={category.id} value={category.id}>
-                {category.name}
-              </MenuItem>
-            ))}
-          </Select>
+          <InputLabel>Setor</InputLabel>
+          
         </FormControl>
 
         <TextField

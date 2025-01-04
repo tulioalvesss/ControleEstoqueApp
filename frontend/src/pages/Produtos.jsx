@@ -24,6 +24,9 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,12 +34,15 @@ import {
   Delete as DeleteIcon,
   ExpandMore as ExpandMoreIcon,
   Warning as WarningIcon,
+  Inventory as InventoryIcon
 } from '@mui/icons-material';
 import MainLayout from '../components/layout/MainLayout';
 import { productService } from '../services/productService';
-import { categoryService } from '../services/categoryService';
+import { sectorService } from '../services/sectorService';
+import { productComponentsService } from '../services/productComponentsService';
 import ModalEditProduct from '../components/componentsProduct/modalEditProduct';
 import ModalAddProduct from '../components/componentsProduct/modalAddProduct';
+import { stockComponentService } from '../services/stockComponentsService';
 
 const Produtos = () => {
   const [products, setProducts] = useState([]);
@@ -45,10 +51,11 @@ const Produtos = () => {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-
   const [openAddModal, setOpenAddModal] = useState(false);
-  const [categories, setCategories] = useState({});
-  const [productsByCategory, setProductsByCategory] = useState({});
+  const [sectors, setSectors] = useState({});
+  const [productsBySector, setProductsBySector] = useState({});
+  const [openComponentsModal, setOpenComponentsModal] = useState(false);
+  const [productComponents, setProductComponents] = useState([]);
 
   useEffect(() => {
     loadProductsAndCategories();
@@ -56,31 +63,29 @@ const Produtos = () => {
 
   const loadProductsAndCategories = async () => {
     try {
-      const [productsData, categoriesData] = await Promise.all([
+      const [productsData, sectorsData] = await Promise.all([
         productService.getAll(),
-        categoryService.getAll()
+        sectorService.getSectors()
       ]);
 
-      // Criar um mapa de categorias por ID para fácil acesso
-      const categoriesMap = categoriesData.reduce((acc, category) => {
-        acc[category.id] = category.name;
+      const sectorsMap = sectorsData.reduce((acc, sector) => {
+        acc[sector.id] = sector.name;
         return acc;
       }, {});
       
-      setCategories(categoriesMap);
+      setSectors(sectorsMap);
       setProducts(productsData);
       
-      // Organizar produtos por categoria usando o nome da categoria
       const groupedProducts = productsData.reduce((acc, product) => {
-        const categoryName = categoriesMap[product.categoryId] || 'Sem Categoria';
-        if (!acc[categoryName]) {
-          acc[categoryName] = [];
+        const sectorName = sectorsMap[product.sectorId] || 'Sem Setor';
+        if (!acc[sectorName]) {
+          acc[sectorName] = [];
         }
-        acc[categoryName].push(product);
+        acc[sectorName].push(product);
         return acc;
       }, {});
       
-      setProductsByCategory(groupedProducts);
+      setProductsBySector(groupedProducts);
     } catch (err) {
       setError('Erro ao carregar dados');
       console.error(err);
@@ -99,8 +104,31 @@ const Produtos = () => {
     setOpenDeleteModal(true);
   };
 
-  const handleCreate = () => {
-    setOpenAddModal(true);
+  const handleViewComponents = async (product) => {
+    try {
+      if (product.components && product.components.length > 0) {
+        // Se o produto já tem os componentes carregados, use-os diretamente
+        const componentsWithDetails = product.components.map(component => ({
+          id: component.id,
+          name: component.name,
+          quantity: component.ProductComponent?.quantity || component.quantity,
+          unit: component.unit,
+          minQuantity: component.minQuantity
+        }));
+
+        setProductComponents(componentsWithDetails);
+      } else {
+        // Caso contrário, busque os componentes da API
+        const components = await productComponentsService.getProductComponents(product.id);
+        setProductComponents(components || []);
+      }
+      
+      setSelectedProduct(product);
+      setOpenComponentsModal(true);
+    } catch (error) {
+      console.error('Erro ao carregar componentes:', error);
+      setProductComponents([]);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -110,67 +138,22 @@ const Produtos = () => {
       setOpenDeleteModal(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Erro ao excluir produto');
-      console.error(err);
     }
-  };
-
-  const handleCloseEditModal = () => {
-    setOpenEditModal(false);
-    setSelectedProduct(null);
-  };
-
-  const handleCloseDeleteModal = () => {
-    setOpenDeleteModal(false);
-    setSelectedProduct(null);
-  };
-
-  const handleCloseAddModal = () => {
-    setOpenAddModal(false);
   };
 
   return (
     <MainLayout>
       <Box sx={{ p: 3 }}>
-        {/* Cabeçalho Principal */}
-        <Card 
-          elevation={0}
-          sx={{ 
-            mb: 3, 
-            bgcolor: 'primary.main',
-            borderRadius: 2,
-          }}
-        >
-          <Box 
-            sx={{ 
-              p: 2,
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-            }}
-          >
-            <Typography 
-              variant="h4" 
-              component="h1" 
-              sx={{ 
-                fontWeight: 'bold',
-                color: 'white'
-              }}
-            >
-              Gestão de Produtos
+        <Card elevation={0} sx={{ mb: 3, bgcolor: 'primary.main', borderRadius: 2 }}>
+          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h5" sx={{ color: 'white' }}>
+              Gerenciamento de Produtos
             </Typography>
             <Button
               variant="contained"
-              color="secondary"
               startIcon={<AddIcon />}
-              onClick={() => handleCreate()}
-              sx={{ 
-                borderRadius: 2,
-                bgcolor: 'white',
-                color: 'primary.main',
-                '&:hover': {
-                  bgcolor: 'grey.100',
-                }
-              }}
+              onClick={() => setOpenAddModal(true)}
+              sx={{ bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
             >
               Novo Produto
             </Button>
@@ -178,241 +161,129 @@ const Produtos = () => {
         </Card>
 
         <Grid container spacing={3}>
-          {/* Lista Principal de Produtos */}
           <Grid item xs={12}>
             <Card elevation={3}>
-              <Box 
-                sx={{ 
-                  p: 2, 
-                  borderTopLeftRadius: 1,
-                  borderTopRightRadius: 1,
-                }}
-              >
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 'medium'
-                  }}
-                >
+              <Box sx={{ p: 2, bgcolor: 'primary.light' }}>
+                <Typography variant="h6" sx={{ color: 'white' }}>
                   Lista de Produtos
                 </Typography>
               </Box>
               <CardContent>
-                {products.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 3 }}>
-                    <Typography variant="h6" color="textSecondary">
-                      Nenhum produto cadastrado
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ overflowX: 'auto' }}>
-                    <Table sx={{ minWidth: 800 }}>
-                      <TableHead>
-                        <TableRow
-                          sx={{
-                            bgcolor: 'primary.main',
-                            '& th': { 
-                              color: 'white',
-                              fontWeight: 'bold',
-                            }
-                          }}
-                        >
-                          <TableCell>Nome</TableCell>
-                          <TableCell>Descrição</TableCell>
-                          <TableCell align="right">Preço</TableCell>
-                          <TableCell align="center">Quantidade</TableCell>
-                          <TableCell align="center">Status</TableCell>
-                          <TableCell align="center">Ações</TableCell>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Nome</TableCell>
+                        <TableCell>SKU</TableCell>
+                        <TableCell align="right">Preço</TableCell>
+                        <TableCell>Setor</TableCell>
+                        <TableCell align="center">Componentes</TableCell>
+                        <TableCell align="center">Ações</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {products.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{product.name}</TableCell>
+                          <TableCell>{product.sku}</TableCell>
+                          <TableCell align="right">
+                            R$ {Number(product.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>{sectors[product.sectorId]}</TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleViewComponents(product)}
+                              color="primary"
+                            >
+                              <InventoryIcon />
+                            </IconButton>
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEdit(product)}
+                              color="primary"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(product)}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {products.map((product) => (
-                          <TableRow key={product.id} hover>
-                            <TableCell>{product.name}</TableCell>
-                            <TableCell>{product.description}</TableCell>
-                            <TableCell align="right">
-                              <Typography sx={{ fontWeight: 'medium' }}>
-                                R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {product.quantity < product.minQuantity ? (
-                                  <Tooltip title="Estoque baixo">
-                                    <WarningIcon color="warning" sx={{ mr: 1 }} />
-                                  </Tooltip>
-                                ) : null}
-                                <Typography>{product.quantity}</Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                label={product.quantity > product.minQuantity ? "Normal" : "Baixo Estoque"}
-                                color={product.quantity > product.minQuantity ? "success" : "warning"}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Tooltip title="Editar">
-                                <IconButton
-                                  size="small"
-                                  color="primary"
-                                  onClick={() => handleEdit(product)}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Excluir">
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => handleDelete(product)}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Produtos por Categoria */}
-          <Grid item xs={12}>
-            <Card elevation={3}>
-              <Box 
-                sx={{ 
-                  p: 2, 
-                  bgcolor: 'primary.light',
-                  borderTopLeftRadius: 1,
-                  borderTopRightRadius: 1,
-                }}
-              >
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    color: 'white',
-                    fontWeight: 'medium'
-                  }}
-                >
-                  Visão por Categorias
-                </Typography>
-              </Box>
-              <CardContent>
-                {Object.keys(productsByCategory).length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 3 }}>
-                    <Typography variant="h6" color="textSecondary">
-                      Nenhum produto cadastrado em categorias
-                    </Typography>
-                  </Box>
-                ) : (
-                  Object.entries(productsByCategory).map(([category, categoryProducts]) => (
-                    <Accordion
-                      key={category}
-                      sx={{
-                        '&:before': { display: 'none' },
-                        boxShadow: 'none',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        mb: 1,
-                        '&.Mui-expanded': {
-                          margin: '0 0 8px 0',
-                        }
-                      }}
-                    >
-                      <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
-                        sx={{ backgroundColor: 'background.default' }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ flexGrow: 1 }}>{category}</Typography>
-                          <Chip
-                            label={`${categoryProducts.length} produtos`}
-                            size="small"
-                            sx={{ ml: 2 }}
-                          />
-                        </Box>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <TableContainer>
-                          <Table size="small">
-                            <TableHead>
-                              <TableRow
-                                sx={{
-                                  bgcolor: 'primary.main',
-                                  '& th': { 
-                                    color: 'white',
-                                    fontWeight: 'bold',
-                                  }
-                                }}
-                              >
-                                <TableCell>Nome</TableCell>
-                                <TableCell>Descrição</TableCell>
-                                <TableCell align="right">Preço</TableCell>
-                                <TableCell align="center">Quantidade</TableCell>
-                                <TableCell align="center">Quantidade Mínima</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {categoryProducts.map((product) => (
-                                <TableRow key={product.id} hover>
-                                  <TableCell>{product.name}</TableCell>
-                                  <TableCell>{product.description}</TableCell>
-                                  <TableCell align="right">
-                                    R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </TableCell>
-                                  <TableCell align="center">{product.quantity}</TableCell>
-                                  <TableCell align="center">Qtd. Mínima Cadastrada: {product.minQuantity}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      </AccordionDetails>
-                    </Accordion>
-                  ))
-                )}
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
+
+        <ModalEditProduct
+          open={openEditModal}
+          handleClose={() => setOpenEditModal(false)}
+          product={selectedProduct}
+          onSuccess={loadProductsAndCategories}
+        />
+
+        <ModalAddProduct
+          open={openAddModal}
+          handleClose={() => setOpenAddModal(false)}
+          onSuccess={loadProductsAndCategories}
+        />
+
+        <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
+          <DialogTitle>Confirmar Exclusão</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Tem certeza que deseja excluir o produto "{selectedProduct?.name}"?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenDeleteModal(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmDelete} color="error" variant="contained">
+              Excluir
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog 
+          open={openComponentsModal} 
+          onClose={() => setOpenComponentsModal(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Componentes do Produto</DialogTitle>
+          <DialogContent>
+            <Typography variant="h6" gutterBottom>
+              {selectedProduct?.name}
+            </Typography>
+            {productComponents.length > 0 ? (
+              <List dense>
+                {productComponents.map((component, index) => (
+                  <ListItem key={index}>
+                    <ListItemText
+                      primary={component.name}
+                      secondary={`Quantidade: ${component.quantity} ${component.unit}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography>Nenhum componente cadastrado</Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenComponentsModal(false)}>Fechar</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
-
-      {/* Modal de Edição */}
-      <ModalEditProduct
-        open={openEditModal}
-        handleClose={handleCloseEditModal}
-        product={selectedProduct}
-        onSuccess={loadProductsAndCategories}
-      />
-
-      {/* Modal de Adição */}
-      <ModalAddProduct
-        open={openAddModal}
-        handleClose={handleCloseAddModal}
-        onSuccess={loadProductsAndCategories}
-      />
-
-      {/* Modal de Confirmação de Exclusão */}
-      <Dialog open={openDeleteModal} onClose={handleCloseDeleteModal}>
-        <DialogTitle>Confirmar Exclusão</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Tem certeza que deseja excluir o produto "{selectedProduct?.name}"?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDeleteModal}>Cancelar</Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained">
-            Excluir
-          </Button>
-        </DialogActions>
-      </Dialog>
     </MainLayout>
   );
 };

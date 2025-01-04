@@ -9,12 +9,12 @@ import { useNotifications } from '../contexts/NotificationContext';
 
 const Notificacao = () => {
   const [notifications, setNotifications] = useState([]);
-  const { loadNotifications, soundEnabled, toggleSound } = useNotifications();
+  const notificationService  = useNotifications();
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const data = await getNotifications();
+        const data = await notificationService.getNotifications();
         setNotifications(data);
       } catch (error) {
         console.error('Erro ao buscar notificações:', error);
@@ -25,7 +25,7 @@ const Notificacao = () => {
 
   const handleMarkAsRead = async (id) => {
     try {
-      await markAsRead(id);
+      await notificationService.markAsRead(id);
       setNotifications(notifications.map(notification => 
         notification.id === id ? { ...notification, read: true } : notification
       ));
@@ -36,7 +36,7 @@ const Notificacao = () => {
 
   const handleDelete = async (id) => {
     try {
-      await deleteNotification(id);
+      await notificationService.deleteNotification(id);
       setNotifications(notifications.filter(notification => notification.id !== id));
     } catch (error) {
       console.error('Erro ao deletar notificação:', error);

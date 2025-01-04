@@ -1,13 +1,15 @@
 const Supplier = require('../models/supplier');
 
+// os suppliers são os fornecedores por empresa adicionar requisicao de enterpriseId FEITO
+
 exports.getAll = async (req, res) => {
-  const suppliers = await Supplier.findAll();
+  const suppliers = await Supplier.findAll({ where: { enterpriseId: req.params.enterpriseId } });
   res.json(suppliers);
 };
 
 exports.create = async (req, res) => {
-  const { name, email, phone, categoryId, enterpriseId } = req.body;
-  const supplier = await Supplier.create({ name, email, phone, categoryId, enterpriseId });
+  const { name, email, phone, sectorId, enterpriseId } = req.body;
+  const supplier = await Supplier.create({ name, email, phone, sectorId, enterpriseId });
   res.json(supplier);
 };
 
