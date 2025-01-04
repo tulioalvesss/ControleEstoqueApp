@@ -21,10 +21,7 @@ const productComponentController = {
         res.status(200).json(productComponent);
     },
     deleteProductComponent: async (req, res) => {
-        console.log('chegou no controller');
-        console.log(req.params);
         const { id } = req.params;
-        console.log(id, 'produto removido');
         await ProductComponent.destroy({ where: { id } });
         res.status(204).send();
     },

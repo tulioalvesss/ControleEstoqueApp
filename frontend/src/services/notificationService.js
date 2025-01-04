@@ -1,16 +1,69 @@
 import api from './api';
 
-export const getNotifications = async () => {
-  const response = await api.get('/api/notifications');
-  return response.data;
-};
+export const notificationService = {
+  async getUnreadNotifications() {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
 
-export const markAsRead = async (notificationId) => {
-  const response = await api.put(`/api/notifications/${notificationId}/read`);
-  return response.data;
-};
+      const response = await api.get('/api/notifications/unread', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        throw new Error('Usuário não autenticado');
+      }
+      throw new Error('Erro ao buscar notificações não lidas');
+    }
+  },
 
-export const deleteNotification = async (notificationId) => {
-  const response = await api.delete(`/api/notifications/${notificationId}`);
-  return response.data;
+  async markAsRead(id) {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const response = await api.post(`/api/notifications/${id}/read`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro detalhado:', error);
+      throw new Error('Erro ao marcar notificação como lida');
+    }
+  },
+
+  async getAllNotificationsByEnterprise() {
+    try {
+      const token = localStorage.getItem('token');
+      const enterpriseId = localStorage.getItem('enterpriseId');  
+      if (!token || !enterpriseId) {
+        throw new Error('Usuário não autenticado');
+      }
+      const response = await api.get(`/api/notifications/${enterpriseId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const allNotificationsRead = response.data.filter(n => n.read === true);
+      return allNotificationsRead;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        throw new Error('Usuário não autenticado');
+      }
+      throw new Error('Erro ao buscar todas as notificações por empresa');
+    }
+  }
 };

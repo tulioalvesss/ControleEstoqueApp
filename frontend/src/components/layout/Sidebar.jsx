@@ -1,14 +1,23 @@
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar, Box, Divider } from '@mui/material';
+import React from 'react';
+import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar, Box, Divider, Badge } from '@mui/material';
 import { Dashboard, Inventory, BarChart, People, Settings, Help } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications } from '../../contexts/NotificationContext';
 import { Bell } from '@phosphor-icons/react';
-import { Link } from 'react-router-dom';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { styled } from '@mui/material/styles';
+
+const AnimatedBell = styled(Bell)(({ theme, hasnew }) => ({
+  animation: hasnew === 'true' ? 'shake 0.5s ease-in-out infinite' : 'none',
+  '@keyframes shake': {
+    '0%, 100%': { transform: 'rotate(0deg)' },
+    '25%': { transform: 'rotate(-10deg)' },
+    '75%': { transform: 'rotate(10deg)' }
+  }
+}));
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const notificationContext = useNotifications();
-  const unreadCount = notificationContext?.unreadCount || 0;
+  const { notifications, hasNewNotifications } = useNotifications();
 
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
@@ -19,6 +28,19 @@ const Sidebar = () => {
     { text: 'Relatórios', icon: <BarChart />, path: '/relatorios' },
     { text: 'Configurações', icon: <Settings />, path: '/configuracoes' },
     { text: 'Suporte', icon: <Help />, path: '/suporte' },
+    { 
+      text: 'Notificações', 
+      icon: (
+        <Badge badgeContent={notifications.length} color="error">
+          <AnimatedBell 
+            size={24} 
+            weight="fill"
+            hasnew={hasNewNotifications.toString()}
+          />
+        </Badge>
+      ), 
+      path: '/notificacoes' 
+    },
   ];
 
   return (
@@ -70,56 +92,6 @@ const Sidebar = () => {
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
-        <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', margin: '10px 0' }} />
-        <ListItem 
-          button
-          onClick={() => navigate('/notificacoes')}
-          sx={{
-            borderRadius: '8px',
-            margin: '6px 0',
-            padding: '14px 20px',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              bgcolor: 'rgba(255, 255, 255, 0.15)',
-              transform: 'translateX(6px)'
-            },
-            '& .MuiListItemIcon-root': {
-              color: '#ffffff',
-              minWidth: '40px',
-              position: 'relative'
-            },
-            '& .MuiListItemText-primary': {
-              fontSize: '1rem',
-              fontWeight: 600,
-              letterSpacing: '0.3px'
-            }
-          }}
-        >
-          <ListItemIcon>
-            <Bell size={24} />
-            {unreadCount > 0 && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: -4,
-                  right: 0,
-                  bgcolor: 'error.main',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: 18,
-                  height: 18,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.75rem',
-                }}
-              >
-                {unreadCount}
-              </Box>
-            )}
-          </ListItemIcon>
-          <ListItemText primary="Notificações" />
-        </ListItem>
       </List>
     </Drawer>
   );

@@ -1,11 +1,9 @@
 import { Box } from '@mui/material';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import { NotificationProvider } from '../../contexts/NotificationContext';
 
 const MainLayout = ({ children }) => {
   return (
-    <NotificationProvider>
       <Box sx={{ display: 'flex' }}>
         <Navbar />
         <Sidebar />
@@ -22,7 +20,6 @@ const MainLayout = ({ children }) => {
           {children}
         </Box>
       </Box>
-    </NotificationProvider>
   );
 };
 

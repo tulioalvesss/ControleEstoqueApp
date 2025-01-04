@@ -1,7 +1,7 @@
 const StockComponent = require('../models/StockComponent');
 const Stock = require('../models/Stock');
-const notificationController = require('./notificationController');
 const { Op } = require('sequelize');
+const { createNotification } = require('../services/notificationService');
 
 exports.createComponent = async (req, res) => {
   try {
@@ -62,6 +62,16 @@ exports.updateComponent = async (req, res) => {
       minQuantity,
       unit
     });
+
+    // Verifica se o estoque está abaixo do mínimo
+    if (quantity <= minQuantity) {
+      await createNotification({
+        message: `Componente ${name} está com estoque baixo (${quantity} unidades)`,
+        type: 'low_stock',
+        productId: id,
+        enterpriseId
+      });
+    }
 
     res.status(200).json(component);
   } catch (error) {
@@ -151,4 +161,33 @@ exports.getComponentById = async (req, res) => {
   const { id } = req.params;
   const component = await StockComponent.findByPk(id);
   res.json(component);
+};
+
+exports.updateStock = async (req, res) => {
+  try {
+    const { id, quantity, sector_id } = req.body;
+    
+    const component = await StockComponent.findOne({
+      where: { id },
+      include: [{ model: StockThreshold }]
+    });
+
+    const newQuantity = quantity;
+    
+    // Atualiza o estoque
+    await StockComponent.update(
+      { quantity: newQuantity },
+      { 
+        where: { 
+          component_id: id,
+          sector_id: sector_id
+        }
+      }
+    );
+    
+    return res.status(200).json({ message: 'Estoque atualizado com sucesso' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao atualizar estoque' });
+  }
 };

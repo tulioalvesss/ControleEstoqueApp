@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { AuthProvider } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Produtos from './pages/Produtos';
@@ -12,12 +11,12 @@ import HomeSaaS from './pages/HomeSaaS';
 import Relatorios from './pages/Relatorios';
 import Suporte from './pages/Suporte';
 import Perfil from './pages/Perfil';
-import Notificacoes from './pages/Notificacao';
 import Configuracoes from './pages/Configuracoes';
 import EnterpriseRegistration from './pages/EnterpriseRegistration';
 import  Setores  from './pages/Setores';
 import Estoque from './pages/Estoque';
-
+import Notificacoes from './pages/Notificacoes';
+import { NotificationProvider } from './contexts/NotificationContext';
 const theme = createTheme({
     palette: {
       primary: {
@@ -88,14 +87,6 @@ function App() {
                 }
               />
               <Route
-                path="/notificacoes"
-                element={
-                  <PrivateRoute>
-                    <Notificacoes />
-                  </PrivateRoute>
-                }
-              />
-              <Route
                 path="/suporte"
                 element={
                   <PrivateRoute>
@@ -124,6 +115,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Estoque />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/notificacoes"
+                element={
+                  <PrivateRoute>
+                    <Notificacoes />
                   </PrivateRoute>
                 }
               />

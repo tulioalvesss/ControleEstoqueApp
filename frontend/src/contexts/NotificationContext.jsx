@@ -1,99 +1,127 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getNotifications } from '../services/notificationService';
-import { subscribeToNotifications, connectSocket, disconnectSocket } from '../services/socketService';
-import { audioService } from '../services/audioService';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { notificationService } from '../services/notificationService';
+import { useAuth } from './AuthContext';
 
-const NotificationContext = createContext({
-  notifications: [],
-  unreadCount: 0,
-  loadNotifications: () => {},
-  addNotification: () => {},
-  soundEnabled: true,
-  toggleSound: () => {}
-});
+const NotificationContext = createContext();
 
-export const NotificationProvider = ({ children, pollingInterval = 30000 }) => {
+export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [lastNotificationCount, setLastNotificationCount] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    return localStorage.getItem('notificationSound') !== 'disabled';
-  });
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  const [lastNotification, setLastNotification] = useState('');
+  const previousNotifications = useRef([]);
+  const audioRef = useRef(null);
+  const reminderTimeoutRef = useRef(null);
+  const { isAuthenticated } = useAuth();
 
-  const toggleSound = () => {
-    const newState = !soundEnabled;
-    setSoundEnabled(newState);
-    localStorage.setItem('notificationSound', newState ? 'enabled' : 'disabled');
+  useEffect(() => {
+    audioRef.current = new Audio('/sounds/notificacao.mp3');
+    audioRef.current.load();
+  }, []);
+
+  const playNotificationSound = async () => {
+    try {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        await audioRef.current.play();
+      }
+    } catch (error) {
+      console.error('Erro ao tocar som:', error);
+    }
   };
 
-  const loadNotifications = async () => {
-    try {
-      const data = await getNotifications();
-      const unreadNotifications = data.filter(n => !n.read);
-      const previousUnreadCount = notifications.filter(n => !n.read).length;
-      const newUnreadCount = unreadNotifications.length;
+  const showNotificationReminder = () => {
+    if (notifications.some(n => !n.read)) {
+      setHasNewNotifications(true);
+      playNotificationSound();
 
-      if (newUnreadCount > previousUnreadCount && soundEnabled) {
-        audioService.playNotificationSound();
+      setTimeout(() => {
+        setHasNewNotifications(false);
+      }, 3000);
+
+      // Agenda o próximo lembrete
+      scheduleNextReminder();
+    }
+  };
+
+  const scheduleNextReminder = () => {
+    // Limpa o timeout anterior se existir
+    if (reminderTimeoutRef.current) {
+      clearTimeout(reminderTimeoutRef.current);
+    }
+
+    // Agenda novo lembrete para 5 minutos (300000 ms)
+    reminderTimeoutRef.current = setTimeout(() => {
+      showNotificationReminder();
+    }, 300000);
+  };
+
+  const checkNewNotifications = (newNotifications) => {
+    const prevIds = new Set(previousNotifications.current.map(n => n.id));
+    const hasNew = newNotifications.some(n => !prevIds.has(n.id));
+
+    if (hasNew && newNotifications.length > 0) {
+      setHasNewNotifications(true);
+      setLastNotification(newNotifications[0].message);
+      playNotificationSound();
+
+      setTimeout(() => {
+        setHasNewNotifications(false);
+      }, 3000);
+
+      // Agenda um lembrete se houver notificações não lidas
+      if (newNotifications.some(n => !n.read)) {
+        scheduleNextReminder();
       }
+    }
 
-      setLastNotificationCount(data.length);
-      setNotifications(data);
-      setUnreadCount(newUnreadCount);
+    previousNotifications.current = newNotifications;
+    setNotifications(newNotifications);
+  };
+
+  const fetchNotifications = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      const data = await notificationService.getUnreadNotifications();
+      checkNewNotifications(data);
     } catch (error) {
-      console.error('Erro ao carregar notificações:', error);
+      console.error('Erro ao buscar notificações:', error);
     }
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const enterpriseId = localStorage.getItem('enterpriseId');
+    if (isAuthenticated) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 5000);
 
-    if (!token || !enterpriseId) {
-      return;
+      // Limpa os intervalos e timeouts quando o componente for desmontado
+      return () => {
+        clearInterval(interval);
+        if (reminderTimeoutRef.current) {
+          clearTimeout(reminderTimeoutRef.current);
+        }
+      };
     }
+  }, [isAuthenticated]);
 
-    loadNotifications();
-    
-    connectSocket();
-    
-    subscribeToNotifications((newNotification) => {
-      console.log('Nova notificação recebida:', newNotification);
-      setNotifications(prev => [newNotification, ...prev]);
-      setUnreadCount(prev => prev + 1);
-      if (soundEnabled && !newNotification.read) {
-        audioService.playNotificationSound();
-      }
-    });
-    
-    // Configurar o polling
-    const intervalId = setInterval(() => {
-      loadNotifications();
-    }, pollingInterval);
-    
-    return () => {
-      disconnectSocket();
-      clearInterval(intervalId);
-    };
-  }, [pollingInterval]);
+  // Efeito para gerenciar lembretes quando as notificações mudam
+  useEffect(() => {
+    if (notifications.some(n => !n.read)) {
+      scheduleNextReminder();
+    } else if (reminderTimeoutRef.current) {
+      clearTimeout(reminderTimeoutRef.current);
+    }
+  }, [notifications]);
 
   return (
-    <NotificationContext.Provider value={{ 
-      notifications, 
-      unreadCount, 
-      loadNotifications,
-      addNotification: (notification) => {
-        setNotifications(prev => [notification, ...prev]);
-        if (!notification.read) {
-          setUnreadCount(prev => prev + 1);
-          if (soundEnabled) {
-            audioService.playNotificationSound();
-          }
-        }
-      },
-      soundEnabled,
-      toggleSound
-    }}>
+    <NotificationContext.Provider 
+      value={{ 
+        notifications, 
+        hasNewNotifications, 
+        lastNotification,
+        fetchNotifications 
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );
@@ -101,8 +129,8 @@ export const NotificationProvider = ({ children, pollingInterval = 30000 }) => {
 
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
-  if (context === undefined) {
-    console.warn('useNotifications deve ser usado dentro de um NotificationProvider');
+  if (!context) {
+    throw new Error('useNotifications deve ser usado dentro de um NotificationProvider');
   }
   return context;
 };

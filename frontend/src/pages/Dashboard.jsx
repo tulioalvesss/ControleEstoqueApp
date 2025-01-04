@@ -124,7 +124,7 @@ const Dashboard = () => {
         </Grid>
         <Grid item xs={12} md={4}>
           <DashboardCard
-            title="Produtos com Estoque Baixo"
+            title="Itens com Estoque Baixo"
             value={dashboardData.lowStockProducts}
             icon={<WarningIcon sx={{ color: theme.palette.warning.main }} />}
             color={theme.palette.warning.main}

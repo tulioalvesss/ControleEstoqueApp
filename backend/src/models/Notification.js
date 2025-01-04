@@ -1,7 +1,5 @@
-'use strict';
-
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+const {sequelize} = require('../config/database');
 
 const Notification = sequelize.define('Notification', {
   id: {
@@ -23,23 +21,8 @@ const Notification = sequelize.define('Notification', {
   },
   enterpriseId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'Enterprises',
-      key: 'id'
-    }
-  },
-  productId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'Products',
-      key: 'id'
-    }
+    allowNull: false
   }
-}, {
-  tableName: 'notifications',
-  timestamps: true
 });
 
 module.exports = Notification;

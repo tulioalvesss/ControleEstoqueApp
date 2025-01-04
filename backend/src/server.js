@@ -15,6 +15,7 @@ const stockRoutes = require('./routes/stockRoutes');
 const productComponentsRoutes = require('./routes/productComponentsRoutes');
 const stockComponentRoutes = require('./routes/stockComponentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+
 // Carrega variáveis de ambiente
 dotenv.config();
 
@@ -58,11 +59,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/enterprises', enterpriseRoutes);
 app.use('/api/sectors', sectorRoutes);
 app.use('/api/stock-history', stockHistoryRoutes);
-app.use('/api/notifications', notificationRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/product-components', productComponentsRoutes);
 app.use('/api/stock-components', stockComponentRoutes);
+app.use('/api/notifications', notificationRoutes);
 // Rota básica de teste
 app.get('/', (req, res) => {
   res.json({ message: 'API de Controle de Estoque funcionando!' });
@@ -72,26 +73,6 @@ app.get('/', (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Erro interno do servidor' });
-});
-
-app.put('/api/products/:id', async (req, res) => {
-  try {
-    // ... código de atualização do produto ...
-    
-    if (updatedProduct.quantity < 20) {
-      const notification = await Notification.create({
-        message: `Produto ${updatedProduct.name} está com estoque baixo (${updatedProduct.quantity} unidades)`,
-        type: 'low_stock',
-        ProductId: updatedProduct.id
-      });
-      
-      io.emit('newNotification', notification);
-    }
-    
-    res.json(updatedProduct);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
 const PORT = process.env.PORT || 3001;
