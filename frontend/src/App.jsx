@@ -1,22 +1,10 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { AuthProvider } from './contexts/AuthContext';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Produtos from './pages/Produtos';
-import Users from './pages/Users';
-import PrivateRoute from './components/PrivateRoute';
-import HomeSaaS from './pages/HomeSaaS';
-import Relatorios from './pages/Relatorios';
-import Suporte from './pages/Suporte';
-import Perfil from './pages/Perfil';
-import Configuracoes from './pages/Configuracoes';
-import EnterpriseRegistration from './pages/EnterpriseRegistration';
-import  Setores  from './pages/Setores';
-import Estoque from './pages/Estoque';
-import Notificacoes from './pages/Notificacoes';
 import { NotificationProvider } from './contexts/NotificationContext';
+import AppRoutes from './routes'; // Vamos criar este componente para as rotas
+
 const theme = createTheme({
     palette: {
       primary: {
@@ -30,107 +18,16 @@ const theme = createTheme({
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <NotificationProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<HomeSaaS />} />
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/produtos"
-                element={
-                  <PrivateRoute>
-                    <Produtos />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/usuarios"
-                element={
-                  <PrivateRoute>
-                    <Users />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/relatorios"
-                element={
-                  <PrivateRoute>
-                    <Relatorios />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/perfil"
-                element={
-                  <PrivateRoute>
-                    <Perfil />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/configuracoes"
-                element={
-                  <PrivateRoute>
-                    <Configuracoes />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/suporte"
-                element={
-                  <PrivateRoute>
-                    <Suporte />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/enterprise-registration"
-                element={
-                  <PrivateRoute>
-                    <EnterpriseRegistration />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/setores"
-                element={
-                  <PrivateRoute>
-                    <Setores />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/estoque"
-                element={
-                  <PrivateRoute>
-                    <Estoque />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/notificacoes"
-                element={
-                  <PrivateRoute>
-                    <Notificacoes />
-                  </PrivateRoute>
-                }
-              />
-            </Routes>
-          </BrowserRouter>
-        </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <NotificationProvider>
+            <AppRoutes />
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
 

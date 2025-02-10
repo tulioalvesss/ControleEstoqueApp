@@ -11,7 +11,7 @@ export const NotificationProvider = ({ children }) => {
   const previousNotifications = useRef([]);
   const audioRef = useRef(null);
   const reminderTimeoutRef = useRef(null);
-  const { isAuthenticated } = useAuth();
+  const { signed, user } = useAuth();
 
   useEffect(() => {
     audioRef.current = new Audio('/sounds/notificacao.mp3');
@@ -38,24 +38,26 @@ export const NotificationProvider = ({ children }) => {
         setHasNewNotifications(false);
       }, 3000);
 
-      // Agenda o próximo lembrete
       scheduleNextReminder();
     }
   };
 
   const scheduleNextReminder = () => {
-    // Limpa o timeout anterior se existir
     if (reminderTimeoutRef.current) {
       clearTimeout(reminderTimeoutRef.current);
     }
 
-    // Agenda novo lembrete para 5 minutos (300000 ms)
     reminderTimeoutRef.current = setTimeout(() => {
       showNotificationReminder();
     }, 300000);
   };
 
   const checkNewNotifications = (newNotifications) => {
+    if (!Array.isArray(newNotifications)) {
+      console.error('Notificações inválidas recebidas:', newNotifications);
+      return;
+    }
+
     const prevIds = new Set(previousNotifications.current.map(n => n.id));
     const hasNew = newNotifications.some(n => !prevIds.has(n.id));
 
@@ -68,7 +70,6 @@ export const NotificationProvider = ({ children }) => {
         setHasNewNotifications(false);
       }, 3000);
 
-      // Agenda um lembrete se houver notificações não lidas
       if (newNotifications.some(n => !n.read)) {
         scheduleNextReminder();
       }
@@ -79,32 +80,37 @@ export const NotificationProvider = ({ children }) => {
   };
 
   const fetchNotifications = async () => {
-    if (!isAuthenticated) return;
+    if (!signed || !user) return;
 
     try {
       const data = await notificationService.getUnreadNotifications();
-      checkNewNotifications(data);
+      if (data) {
+        checkNewNotifications(data);
+      }
     } catch (error) {
       console.error('Erro ao buscar notificações:', error);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (signed && user) {
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 5000);
 
-      // Limpa os intervalos e timeouts quando o componente for desmontado
       return () => {
         clearInterval(interval);
         if (reminderTimeoutRef.current) {
           clearTimeout(reminderTimeoutRef.current);
         }
       };
+    } else {
+      setNotifications([]);
+      setHasNewNotifications(false);
+      setLastNotification('');
+      previousNotifications.current = [];
     }
-  }, [isAuthenticated]);
+  }, [signed, user]);
 
-  // Efeito para gerenciar lembretes quando as notificações mudam
   useEffect(() => {
     if (notifications.some(n => !n.read)) {
       scheduleNextReminder();

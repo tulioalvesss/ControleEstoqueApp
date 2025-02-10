@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -13,8 +13,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
+  const { login, signed } = useAuth();
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,20 +22,19 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (signed) {
+      navigate('/login');
+    }
+  }, [signed, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const { hasEnterprise } = await login(formData);
-      
-      // Redireciona com base no status da empresa
-      if (hasEnterprise) {
-        navigate('/dashboard');
-      } else {
-        navigate('/enterprise-registration');
-      }
+      await login(formData);
     } catch (err) {
       console.error('Erro detalhado:', err);
       setError(
